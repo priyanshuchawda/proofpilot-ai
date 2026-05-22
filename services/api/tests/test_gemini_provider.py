@@ -25,6 +25,16 @@ async def test_mock_gemini_provider_returns_deterministic_response() -> None:
     assert response.provider == "mock"
 
 
+def test_gemini_generate_request_can_enable_google_search_tool() -> None:
+    request = GeminiGenerateRequest(
+        prompt="What changed today?",
+        model="gemini-2.5-flash-lite",
+        enable_google_search=True,
+    )
+
+    assert request.enable_google_search
+
+
 def test_provider_factory_uses_mock_when_key_missing_in_development() -> None:
     settings = Settings(gemini_api_key=None)
 

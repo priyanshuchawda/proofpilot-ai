@@ -11,6 +11,7 @@ Last updated: 2026-05-23
 - #9: Embeddings and Qdrant vector indexing.
 - #11: Hybrid retrieval and evidence ranking.
 - #13: Cited answer generation and streaming chat.
+- #15: Query routing, modes, and contradiction checks.
 
 ## Current Architecture Decisions
 
@@ -25,6 +26,7 @@ Last updated: 2026-05-23
 - Hybrid retrieval uses deterministic Reciprocal Rank Fusion over dense Qdrant IDs and workspace-scoped keyword/exact matches, with trace rows persisted for inspection.
 - Cited answer generation validates generated citation IDs against retrieved evidence and refuses when evidence is missing or citations are fabricated.
 - Query routing now labels Fast Mode, Verified Mode, no-evidence, and freshness-required routes. Verified Mode includes deterministic contradiction detection for simple numeric claims.
+- Google Search grounding is feature-flagged and disabled by default. Freshness-required questions refuse clearly when grounding is disabled.
 
 ## Commands That Passed
 
@@ -75,6 +77,8 @@ Last updated: 2026-05-23
 - Issue #15 focused tests: `uv run pytest tests/test_query_routing.py tests/test_contradictions.py tests/test_query_service.py -q`
 - Issue #15 backend gates: `uv run ruff format --check .`, `uv run ruff check .`, `uv run pyright`, `uv run pytest`.
 - Issue #15 standard local gates: backend format, lint, pyright, pytest; frontend lint, typecheck, test, build; Docker Compose config; git diff check.
+- Issue #17 focused tests: `uv run pytest tests/test_answer_service.py tests/test_gemini_provider.py -q`
+- Issue #17 standard local gates: backend format, lint, pyright, pytest; frontend lint, typecheck, test, build; Docker Compose config; git diff check.
 
 ## Unresolved Risks
 
@@ -85,8 +89,8 @@ Last updated: 2026-05-23
 - Issue #11 keyword retrieval currently uses deterministic exact term overlap over workspace chunks. PostgreSQL full-text optimization remains a later internal improvement behind the same service contract.
 - Issue #13 query UI currently consumes a full JSON response after showing a loading/streaming state; token-by-token SSE remains a later transport improvement.
 - Existing local Docker Postgres volume is not initialized with role `proofpilot`, so `uv run alembic upgrade head` is blocked on that local volume. No volume reset was performed.
-- Issue #15 freshness-required routing does not perform web grounding yet. It reports `freshness_required_grounding_disabled` until the free-tier-safe grounding route is implemented.
+- Issue #17 adds the backend-only Google Search tool flag, but Search grounding remains disabled by default. Live grounding smoke is deferred until explicitly enabled because it spends free-tier grounding quota.
 
 ## Next Issue
 
-- Finish Issue #15 PR after local checks/security checks pass.
+- Finish Issue #17 PR after local checks/security checks pass.
