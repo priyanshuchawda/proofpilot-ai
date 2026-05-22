@@ -4,7 +4,7 @@ Last updated: 2026-05-23
 
 ## Completed Issues
 
-- None yet.
+- #1: Repository bootstrap and engineering foundation.
 
 ## Current Architecture Decisions
 
@@ -41,14 +41,19 @@ Last updated: 2026-05-23
 - `docker compose -f infra/docker-compose.yml config`
 - Local smoke: `GET http://127.0.0.1:8000/api/v1/health`
 - Local smoke: `GET http://127.0.0.1:3000` contains `ProofPilot AI` and `API health`
+- Issue #3 focused backend tests: `uv run pytest tests/test_ai_settings.py tests/test_gemini_provider.py tests/test_gemini_smoke.py -q`
+- Issue #3 focused frontend test: `pnpm --filter @proofpilot/web test`
+- Manual Gemini smoke: `RUN_GEMINI_SMOKE=1 uv run pytest tests/test_gemini_smoke.py -q` passed with `gemini-2.5-flash-lite`
+- Issue #3 full local gates: backend format, lint, pyright, pytest; frontend lint, typecheck, test, build; Docker Compose config; frontend secret scan; git diff check.
 
 ## Unresolved Risks
 
-- Full Issue 1 quality gates still need to run before commit and PR.
+- Issue #1 is merged.
 - GitHub Actions are intentionally disabled for now to avoid spending Actions minutes before final hardening.
-- Gemini embedding and File Search pricing details must be rechecked in Issue 2 before any integration code is added.
+- Gemini embedding and File Search pricing details must be rechecked before embedding or managed File Search integration code is added.
 - In-app browser automation was unavailable in this session; Playwright was also not installed in the shared Node runtime. Issue 1 used HTTP smoke testing instead.
+- Issue #3 PR and merge are still pending.
 
 ## Next Issue
 
-- Commit Issue 1, open PR, merge after local gates pass, then start Issue 2.
+- Commit Issue #3, open PR, and merge after local checks/security checks pass.

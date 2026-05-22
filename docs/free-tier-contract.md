@@ -47,6 +47,11 @@ All model IDs are configuration values, not hard-coded architecture assumptions.
 - Gemini 3 search grounding has separate monthly free prompt limits on supported models, but several Gemini 3 pricing rows mark free tier as not available. The app must require explicit model and feature-flag confirmation before enabling Gemini 3 search.
 - If quota is exhausted, the backend returns `route_quota_exhausted`, preserves retrieval evidence, and allows retry later.
 
+## Live Smoke Result
+
+- 2026-05-23: Manual opt-in smoke test passed with `RUN_GEMINI_SMOKE=1` using `gemini-2.5-flash-lite`.
+- Standard tests remain mocked or skipped and do not require `GEMINI_API_KEY`.
+
 ## Privacy Contract
 
 Official API-key guidance says server-side calls are the most secure way to keep API keys confidential. ProofPilot follows that by keeping Gemini calls in `services/api` and later `services/worker`.

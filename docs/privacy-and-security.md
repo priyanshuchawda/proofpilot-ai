@@ -5,6 +5,7 @@
 - `GEMINI_API_KEY` is read only by backend services.
 - Frontend code must never import Gemini SDKs or receive API keys.
 - `.env`, `.env.local`, credentials, and generated secret files are ignored by Git.
+- Local development reads `.env` from the repository root. Do not place keys in frontend files or `NEXT_PUBLIC_*` variables.
 
 ## Data Handling
 

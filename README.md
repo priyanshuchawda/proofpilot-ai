@@ -47,7 +47,7 @@ cd services/api
 uv sync
 ```
 
-Copy `.env.example` to local ignored environment files as needed. Never commit real API keys.
+Copy `.env.example` to a local ignored `.env` at the repository root as needed. Never commit real API keys.
 
 ## Testing
 
@@ -79,6 +79,8 @@ docker compose -f infra/docker-compose.yml config
 ## Free-Tier Safety
 
 The production MVP must run with only a Google AI Studio `GEMINI_API_KEY`, local Docker services, and free GitHub Actions. See `docs/free-tier-contract.md` for the current verified contract and intentionally disabled capabilities.
+
+Current development/live testing is constrained to `gemini-2.5-flash-lite` for generation routes. Gemini 3.5 model usage is deferred until final production-readiness work.
 
 ## Privacy Warning
 
