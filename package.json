@@ -1,0 +1,14 @@
+{
+  "name": "proofpilot-ai",
+  "private": true,
+  "packageManager": "pnpm@11.1.3",
+  "scripts": {
+    "build": "pnpm --filter @proofpilot/web build",
+    "lint": "pnpm --filter @proofpilot/web lint",
+    "test": "pnpm --filter @proofpilot/web test",
+    "typecheck": "pnpm --filter @proofpilot/web typecheck"
+  },
+  "devDependencies": {
+    "prettier": "3.6.2"
+  }
+}

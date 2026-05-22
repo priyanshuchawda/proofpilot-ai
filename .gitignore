@@ -4,6 +4,7 @@ __pycache__/
 .ruff_cache/
 .pyright/
 .venv/
+htmlcov/
 *.py[cod]
 
 # Node
@@ -12,6 +13,7 @@ node_modules/
 out/
 dist/
 coverage/
+*.tsbuildinfo
 playwright-report/
 test-results/
 
@@ -37,3 +39,5 @@ Thumbs.db
 .idea/
 .vscode/
 
+# Logs
+*.log
