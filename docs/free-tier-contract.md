@@ -39,6 +39,7 @@ All model IDs are configuration values, not hard-coded architecture assumptions.
 - Context caching is not used in the MVP. Some pricing rows mark it unavailable on free tier for selected models.
 - Google Maps grounding, computer use, custom tools endpoints, Vertex AI, and paid tiers are disabled.
 - Real Gemini smoke tests are manual only and guarded by `RUN_GEMINI_SMOKE=1`.
+- Real Gemini embedding calls are deferred during current development because live testing is limited to `gemini-2.5-flash-lite` generation only. The code uses a deterministic local embedding provider for tests and vector plumbing until the embedding model is explicitly re-enabled.
 
 ## Known Quotas And Degradation
 

@@ -7,6 +7,7 @@ Last updated: 2026-05-23
 - #1: Repository bootstrap and engineering foundation.
 - #3: Free-tier contract and Gemini provider boundary.
 - #5: Workspace, database and local infrastructure.
+- #7: Secure document upload and ingestion pipeline.
 
 ## Current Architecture Decisions
 
@@ -17,6 +18,7 @@ Last updated: 2026-05-23
 - Treat Gemini model IDs and Google Search grounding as configuration. Search grounding is disabled by default until the selected model is verified as free-tier-safe.
 - For current development/live testing, use only `gemini-2.5-flash-lite` for generation routes. Defer Gemini 3.5 model usage until final production-readiness review.
 - Keep real Gemini smoke tests manual only behind `RUN_GEMINI_SMOKE=1`.
+- Use deterministic local embeddings for current vector plumbing and tests. Real Gemini embedding calls are deferred while live testing is constrained to `gemini-2.5-flash-lite`.
 
 ## Commands That Passed
 
@@ -53,16 +55,18 @@ Last updated: 2026-05-23
 - Issue #5 migration verification: `uv run alembic upgrade head`, `uv run alembic downgrade base`, `uv run alembic upgrade head`.
 - Issue #7 focused tests: upload validation, redaction, chunking, PDF extraction, and document API tests.
 - Issue #7 standard local gates: backend format, lint, pyright, pytest; frontend lint, typecheck, test, build; Docker Compose config; git diff check.
+- Issue #9 focused tests: `uv run pytest tests/test_embeddings.py tests/test_embedding_index_service.py tests/test_qdrant_integration.py -q`
+- Issue #9 Docker Qdrant integration: `RUN_INFRA_INTEGRATION=1 uv run pytest tests/test_qdrant_integration.py -q`
+- Issue #9 standard local gates: backend format, lint, pyright, pytest; frontend lint, typecheck, test, build; Docker Compose config; git diff check.
 
 ## Unresolved Risks
 
-- Issue #1 is merged.
 - GitHub Actions are intentionally disabled for now to avoid spending Actions minutes before final hardening.
-- Gemini embedding and File Search pricing details must be rechecked before embedding or managed File Search integration code is added.
+- Gemini embedding and File Search pricing details must be rechecked before real Gemini embedding calls or managed File Search integration code are added.
 - In-app browser automation was unavailable in this session; Playwright was also not installed in the shared Node runtime. Issue 1 used HTTP smoke testing instead.
 - Local PostgreSQL uses host port `55432` to avoid a personal Postgres conflict on `5432`.
-- Issue #7 stores redacted chunks and marks documents ready without embeddings. Embedding generation and Qdrant indexing are next.
+- Issue #9 adds vector plumbing with deterministic local embeddings, but upload-time background indexing is not wired yet. That belongs with retrieval/worker orchestration in the next milestones.
 
 ## Next Issue
 
-- Commit Issue #7, open PR, and merge after local checks/security checks pass.
+- Finish Issue #9 PR after local checks/security checks pass.

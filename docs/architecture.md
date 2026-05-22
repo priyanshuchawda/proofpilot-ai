@@ -34,4 +34,8 @@ SQLAlchemy async models define the MVP data surface, including workspaces, docum
 
 ## Ingestion
 
-The MVP ingestion path validates PDF/TXT/Markdown uploads, stores originals through a local storage interface, extracts text with page metadata where available, redacts common secrets, chunks text with page/heading metadata, and persists document status plus chunks. Embeddings and vector indexing are deferred to the next issue.
+The MVP ingestion path validates PDF/TXT/Markdown uploads, stores originals through a local storage interface, extracts text with page metadata where available, redacts common secrets, chunks text with page/heading metadata, and persists document status plus chunks.
+
+## Vector Indexing
+
+Issue #9 adds an embedding/vector boundary with deterministic local embeddings for standard tests and Qdrant indexing behind a typed adapter. The indexing service persists `embedding_record` rows, upserts Qdrant points with chunk payloads, skips already-indexed `(chunk_id, content_hash, model)` records, and embeds queries before vector search. Real Gemini embedding calls remain deferred while local live testing is constrained to `gemini-2.5-flash-lite` generation only.
