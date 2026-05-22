@@ -1,0 +1,97 @@
+from pathlib import Path
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.db.models import Document
+from app.db.session import get_db_session
+from app.ingestion.uploads import UnsupportedUploadError, UploadTooLargeError
+from app.services.documents import DocumentService
+
+router = APIRouter(tags=["documents"])
+
+
+class DocumentResponse(BaseModel):
+    id: str
+    workspace_id: str
+    filename: str
+    mime_type: str
+    status: str
+    chunk_count: int
+
+
+class DocumentStatusResponse(BaseModel):
+    id: str
+    status: str
+
+
+def get_document_service(
+    session: Annotated[AsyncSession, Depends(get_db_session)],
+) -> DocumentService:
+    return DocumentService(session, Path(".data/uploads"))
+
+
+async def to_document_response(
+    document: Document,
+    service: DocumentService,
+) -> DocumentResponse:
+    return DocumentResponse(
+        id=document.id,
+        workspace_id=document.workspace_id,
+        filename=document.filename,
+        mime_type=document.mime_type,
+        status=document.status,
+        chunk_count=await service.chunk_count(document_id=document.id),
+    )
+
+
+@router.post(
+    "/api/v1/workspaces/{workspace_id}/documents",
+    response_model=DocumentResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def upload_document(
+    workspace_id: str,
+    service: Annotated[DocumentService, Depends(get_document_service)],
+    file: Annotated[UploadFile, File(...)],
+) -> DocumentResponse:
+    content = await file.read()
+    try:
+        document = await service.ingest_upload(
+            workspace_id=workspace_id,
+            filename=file.filename or "document",
+            content_type=file.content_type,
+            content=content,
+        )
+    except UploadTooLargeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail=str(exc)
+        ) from exc
+    except UnsupportedUploadError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail=str(exc)
+        ) from exc
+
+    return await to_document_response(document, service)
+
+
+@router.get("/api/v1/workspaces/{workspace_id}/documents", response_model=list[DocumentResponse])
+async def list_documents(
+    workspace_id: str,
+    service: Annotated[DocumentService, Depends(get_document_service)],
+) -> list[DocumentResponse]:
+    documents = await service.list_documents(workspace_id=workspace_id)
+    return [await to_document_response(document, service) for document in documents]
+
+
+@router.get("/api/v1/documents/{document_id}/status", response_model=DocumentStatusResponse)
+async def document_status(
+    document_id: str,
+    service: Annotated[DocumentService, Depends(get_document_service)],
+) -> DocumentStatusResponse:
+    document = await service.get_document(document_id=document_id)
+    if document is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found.")
+    return DocumentStatusResponse(id=document.id, status=document.status)

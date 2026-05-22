@@ -22,6 +22,8 @@
 11. Validate citation IDs against retrieved chunks.
 12. Store query trace and latency metrics.
 
+Document ingestion currently persists redacted chunks and metadata. Dense embeddings and Qdrant indexing are the next retrieval milestone.
+
 ## Citation Rule
 
 No supported citation means no confident factual claim. Unsupported answers must be downgraded or refused.
