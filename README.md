@@ -76,6 +76,8 @@ Infrastructure:
 docker compose -f infra/docker-compose.yml config
 ```
 
+Local PostgreSQL is exposed on host port `55432` to avoid conflicts with personal Postgres installs on `5432`.
+
 ## Free-Tier Safety
 
 The production MVP must run with only a Google AI Studio `GEMINI_API_KEY`, local Docker services, and free GitHub Actions. See `docs/free-tier-contract.md` for the current verified contract and intentionally disabled capabilities.

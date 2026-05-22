@@ -7,6 +7,9 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=(".env", "../../.env"), extra="ignore")
 
     proofpilot_env: str = "development"
+    database_url: str = "postgresql+asyncpg://proofpilot:proofpilot@127.0.0.1:55432/proofpilot"
+    redis_url: str = "redis://localhost:6379/0"
+    qdrant_url: str = "http://localhost:6333"
     gemini_api_key: str | None = None
     gemini_generation_model: str = "gemini-2.5-flash-lite"
     gemini_lightweight_model: str = "gemini-2.5-flash-lite"
