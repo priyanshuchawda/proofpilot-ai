@@ -2,6 +2,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+from app.api.settings import router as settings_router
+
 
 class HealthResponse(BaseModel):
     service: str
@@ -23,6 +25,8 @@ app.add_middleware(
     allow_methods=["GET", "POST"],
     allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
 )
+
+app.include_router(settings_router)
 
 
 @app.get("/api/v1/health", response_model=HealthResponse)

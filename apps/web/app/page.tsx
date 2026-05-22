@@ -1,4 +1,4 @@
-import { Activity, ShieldCheck } from "lucide-react";
+import { Activity, Cpu, ShieldCheck } from "lucide-react";
 
 export default function Home() {
   return (
@@ -28,6 +28,18 @@ export default function Home() {
               </div>
               <div className="flex h-11 w-11 items-center justify-center rounded-md bg-[#12323a] text-[#67e8f9]">
                 <Activity aria-hidden="true" size={22} />
+              </div>
+            </div>
+
+            <div className="mt-4 flex items-center justify-between gap-4 rounded-md border border-[#2b3344] bg-[#0c1320] p-4">
+              <div>
+                <p className="text-sm font-medium text-[#b8c7dd]">Gemini mode</p>
+                <p className="mt-1 text-base font-semibold text-white">
+                  gemini-2.5-flash-lite only
+                </p>
+              </div>
+              <div className="flex h-10 w-10 items-center justify-center rounded-md bg-[#1d2332] text-[#c4b5fd]">
+                <Cpu aria-hidden="true" size={20} />
               </div>
             </div>
 
