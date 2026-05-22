@@ -31,3 +31,7 @@ ProofPilot AI is a monorepo with a TypeScript frontend, Python AI backend, and l
 ## Persistence
 
 SQLAlchemy async models define the MVP data surface, including workspaces, documents, chunks, embeddings, conversations, query traces, citations, evaluations, cache metadata, and latency metrics. Alembic owns schema migration and rollback.
+
+## Ingestion
+
+The MVP ingestion path validates PDF/TXT/Markdown uploads, stores originals through a local storage interface, extracts text with page metadata where available, redacts common secrets, chunks text with page/heading metadata, and persists document status plus chunks. Embeddings and vector indexing are deferred to the next issue.

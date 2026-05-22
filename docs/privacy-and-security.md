@@ -20,6 +20,8 @@
 - Generate storage filenames server-side.
 - Block path traversal.
 - Preserve original filenames only as metadata after sanitization.
+- Redact common secret formats before chunk text is persisted for downstream model-bound use.
+- Supported MVP uploads are PDF, TXT, Markdown, and no OCR is performed.
 
 ## Prompt Injection
 
