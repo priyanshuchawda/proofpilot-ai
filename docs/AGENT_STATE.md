@@ -5,6 +5,7 @@ Last updated: 2026-05-23
 ## Completed Issues
 
 - #1: Repository bootstrap and engineering foundation.
+- #3: Free-tier contract and Gemini provider boundary.
 
 ## Current Architecture Decisions
 
@@ -45,6 +46,10 @@ Last updated: 2026-05-23
 - Issue #3 focused frontend test: `pnpm --filter @proofpilot/web test`
 - Manual Gemini smoke: `RUN_GEMINI_SMOKE=1 uv run pytest tests/test_gemini_smoke.py -q` passed with `gemini-2.5-flash-lite`
 - Issue #3 full local gates: backend format, lint, pyright, pytest; frontend lint, typecheck, test, build; Docker Compose config; frontend secret scan; git diff check.
+- Issue #5 focused tests: `uv run pytest tests/test_workspace_api.py tests/test_database_models.py tests/test_dependency_health.py -q`
+- Issue #5 standard local gates: backend format, lint, pyright, pytest; frontend lint, typecheck, test, build; Docker Compose config; git diff check.
+- Issue #5 Docker integration: `RUN_INFRA_INTEGRATION=1 uv run pytest tests/test_infra_integration.py -q` with `DATABASE_URL` on `127.0.0.1:55432`.
+- Issue #5 migration verification: `uv run alembic upgrade head`, `uv run alembic downgrade base`, `uv run alembic upgrade head`.
 
 ## Unresolved Risks
 
@@ -52,8 +57,8 @@ Last updated: 2026-05-23
 - GitHub Actions are intentionally disabled for now to avoid spending Actions minutes before final hardening.
 - Gemini embedding and File Search pricing details must be rechecked before embedding or managed File Search integration code is added.
 - In-app browser automation was unavailable in this session; Playwright was also not installed in the shared Node runtime. Issue 1 used HTTP smoke testing instead.
-- Issue #3 PR and merge are still pending.
+- Local PostgreSQL uses host port `55432` to avoid a personal Postgres conflict on `5432`.
 
 ## Next Issue
 
-- Commit Issue #3, open PR, and merge after local checks/security checks pass.
+- Finish Issue #5 final gates, commit, open PR, and merge after local checks/security checks pass.

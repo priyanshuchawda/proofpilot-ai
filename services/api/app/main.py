@@ -2,7 +2,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+from app.api.health import router as health_router
 from app.api.settings import router as settings_router
+from app.api.workspaces import router as workspaces_router
 
 
 class HealthResponse(BaseModel):
@@ -27,6 +29,8 @@ app.add_middleware(
 )
 
 app.include_router(settings_router)
+app.include_router(health_router)
+app.include_router(workspaces_router)
 
 
 @app.get("/api/v1/health", response_model=HealthResponse)

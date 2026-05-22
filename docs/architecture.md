@@ -9,6 +9,7 @@ ProofPilot AI is a monorepo with a TypeScript frontend, Python AI backend, and l
 - `services/worker`: planned background ingestion and indexing worker.
 - `packages/generated-api-client`: planned generated TypeScript client from FastAPI OpenAPI.
 - `infra/docker-compose.yml`: local PostgreSQL, Redis, and Qdrant.
+- PostgreSQL maps to host port `55432` so the project does not collide with a personal database on `5432`.
 
 ## Request Flow
 
@@ -26,3 +27,7 @@ ProofPilot AI is a monorepo with a TypeScript frontend, Python AI backend, and l
 - Uploaded documents are evidence, not instructions.
 - Cache keys include workspace and index version.
 - No real Gemini calls run in automated CI.
+
+## Persistence
+
+SQLAlchemy async models define the MVP data surface, including workspaces, documents, chunks, embeddings, conversations, query traces, citations, evaluations, cache metadata, and latency metrics. Alembic owns schema migration and rollback.
