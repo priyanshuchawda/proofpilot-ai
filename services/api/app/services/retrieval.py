@@ -92,10 +92,13 @@ class HybridRetrievalService:
         workspace_id: str,
         query: str,
     ) -> list[RankedCandidate]:
-        chunk_ids = await self._embedding_service.search_query(
-            query=query,
-            limit=self._dense_limit,
-        )
+        try:
+            chunk_ids = await self._embedding_service.search_query(
+                query=query,
+                limit=self._dense_limit,
+            )
+        except Exception:
+            return []
         chunks = await self._chunks_by_id(workspace_id=workspace_id, chunk_ids=chunk_ids)
         return [
             RankedCandidate(chunk_id=chunk_id, source="dense", rank=rank, score=1.0 / rank)

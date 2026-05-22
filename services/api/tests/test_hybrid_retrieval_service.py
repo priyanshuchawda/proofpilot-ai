@@ -32,6 +32,17 @@ class FakeVectorStore(VectorStore):
         return self.chunk_ids[:limit]
 
 
+class BrokenVectorStore(VectorStore):
+    async def ensure_collection(self, *, dimension: int) -> None:
+        pass
+
+    async def upsert(self, points: Sequence[VectorPoint]) -> None:
+        pass
+
+    async def search(self, *, vector: list[float], limit: int) -> list[str]:
+        raise RuntimeError("Qdrant unavailable")
+
+
 async def _create_chunk(
     session_factory: async_sessionmaker[AsyncSession],
     *,
@@ -196,3 +207,47 @@ async def test_hybrid_retrieval_returns_empty_evidence_and_query_run_when_no_mat
     assert result.evidence == []
     assert len(query_runs) == 1
     assert candidates == []
+
+
+async def test_hybrid_retrieval_falls_back_to_keyword_when_dense_search_fails() -> None:
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    async with engine.begin() as connection:
+        await connection.run_sync(Base.metadata.create_all)
+
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+    async with session_factory() as session:
+        workspace = Workspace(name="Retrieval", description=None)
+        session.add(workspace)
+        await session.commit()
+
+    keyword_chunk = await _create_chunk(
+        session_factory,
+        workspace_id=workspace.id,
+        filename="policy.md",
+        text="ProofPilot keeps grounded evidence available.",
+        order=0,
+    )
+
+    async with session_factory() as session:
+        embedding_service = EmbeddingIndexService(
+            session=session,
+            embedding_provider=DeterministicEmbeddingProvider(dimension=16),
+            vector_store=BrokenVectorStore(),
+            embedding_model="deterministic-local",
+        )
+        retrieval_service = HybridRetrievalService(
+            session=session,
+            embedding_service=embedding_service,
+        )
+
+        result = await retrieval_service.retrieve(
+            workspace_id=workspace.id,
+            query="grounded evidence",
+            mode="verified",
+            limit=3,
+        )
+
+    await engine.dispose()
+
+    assert [evidence.chunk_id for evidence in result.evidence] == [keyword_chunk.id]
+    assert result.evidence[0].source == "keyword"

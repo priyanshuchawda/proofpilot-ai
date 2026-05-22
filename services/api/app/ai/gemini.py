@@ -12,6 +12,7 @@ class MissingGeminiApiKeyError(RuntimeError):
 class GeminiGenerateRequest(BaseModel):
     prompt: str = Field(min_length=1)
     model: str
+    response_json_schema: dict[str, Any] | None = None
 
 
 class GeminiGenerateResponse(BaseModel):
@@ -44,9 +45,16 @@ class GoogleGenAIProvider:
 
         client = genai.Client(api_key=self._api_key)
         models: Any = client.aio.models
+        config: dict[str, Any] | None = None
+        if request.response_json_schema is not None:
+            config = {
+                "response_mime_type": "application/json",
+                "response_json_schema": request.response_json_schema,
+            }
         response: Any = await models.generate_content(
             model=request.model,
             contents=request.prompt,
+            config=config,
         )
         return GeminiGenerateResponse(
             text=response.text or "",
