@@ -60,3 +60,5 @@ No supported citation means no confident factual claim. Unsupported answers must
 - Freshness-required questions are detected with explicit terms such as current, latest, today, version, pricing, release, and status.
 - Until web grounding is implemented, freshness-required answers carry `freshness_required_grounding_disabled` so the UI can avoid pretending the answer is current.
 - No-evidence retrieval routes to `route_no_evidence` and returns the existing safe refusal path.
+- When Search grounding is disabled, freshness-required answers refuse rather than returning stale uploaded-document-only facts as current information.
+- Google Search grounding plumbing is backend-only and feature-flagged; it remains off by default to avoid accidental quota use.

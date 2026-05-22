@@ -10,6 +10,10 @@ from app.answers.schemas import AnswerResponse, Citation, GeminiCitedAnswer
 from app.db.models import CitedEvidence, GeneratedAnswer
 from app.retrieval.schemas import EvidenceChunk, RetrievalResult
 
+FRESHNESS_GROUNDING_DISABLED_REFUSAL = (
+    "Freshness is required, but live grounding is disabled for this free-tier-safe configuration."
+)
+
 
 class AnswerService:
     def __init__(
@@ -42,6 +46,19 @@ class AnswerService:
                 contradictions=contradictions,
                 confidence_label="none",
                 refusal_reason="No reliable evidence was found for this question.",
+            )
+        if (
+            route == "route_freshness_required"
+            and freshness_label == "freshness_required_grounding_disabled"
+        ):
+            return await self._persist_refusal(
+                query_run_id=retrieval.query_run_id,
+                mode=mode,
+                route=route,
+                freshness_label=freshness_label,
+                contradictions=contradictions,
+                confidence_label="low",
+                refusal_reason=FRESHNESS_GROUNDING_DISABLED_REFUSAL,
             )
 
         prompt = self._build_prompt(query=query, evidence=retrieval.evidence)

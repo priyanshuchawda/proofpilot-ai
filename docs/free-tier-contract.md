@@ -2,6 +2,8 @@
 
 Date verified: 2026-05-23
 
+Grounding re-check: 2026-05-23
+
 Sources checked through the official Gemini API documentation MCP:
 
 - https://ai.google.dev/gemini-api/docs/pricing
@@ -13,6 +15,12 @@ Sources checked through the official Gemini API documentation MCP:
 - https://ai.google.dev/gemini-api/docs/quickstart
 - https://ai.google.dev/gemini-api/docs/api-key
 - https://ai.google.dev/gemini-api/docs/libraries
+
+The Gemini documentation MCP was rate-limited during the 2026-05-23 grounding re-check, so the current grounding decision was verified directly against official `ai.google.dev` pages:
+
+- https://ai.google.dev/gemini-api/docs/google-search
+- https://ai.google.dev/gemini-api/docs/pricing
+- https://ai.google.dev/gemini-api/docs/models/gemini
 
 ## Selected Configuration Defaults
 
@@ -32,6 +40,7 @@ All model IDs are configuration values, not hard-coded architecture assumptions.
 - Structured JSON outputs for answer contracts and routing outputs.
 - Streaming generation for interactive responses.
 - Google Search grounding only when feature-flagged and only on models whose pricing table marks free-tier grounding as available.
+- As of the 2026-05-23 re-check, official pricing lists Gemini 2.5 Flash-Lite Search grounding as free tier up to 500 RPD shared with Flash RPD, and the Google Search docs list Gemini 2.5 Flash-Lite as supported.
 
 ## Disabled Or Deferred
 
@@ -40,6 +49,7 @@ All model IDs are configuration values, not hard-coded architecture assumptions.
 - Google Maps grounding, computer use, custom tools endpoints, Vertex AI, and paid tiers are disabled.
 - Real Gemini smoke tests are manual only and guarded by `RUN_GEMINI_SMOKE=1`.
 - Real Gemini embedding calls are deferred during current development because live testing is limited to `gemini-2.5-flash-lite` generation only. The code uses a deterministic local embedding provider for tests and vector plumbing until the embedding model is explicitly re-enabled.
+- Google Search grounding remains disabled by default even though Gemini 2.5 Flash-Lite is documented as free-tier-safe up to quota. Freshness-required questions refuse clearly unless `GEMINI_SEARCH_GROUNDING_ENABLED=true` is deliberately set.
 
 ## Known Quotas And Degradation
 

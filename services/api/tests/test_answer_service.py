@@ -8,7 +8,7 @@ from app.answers.context import build_evidence_context
 from app.db.base import Base
 from app.db.models import CitedEvidence, GeneratedAnswer, QueryRun
 from app.retrieval.schemas import EvidenceChunk, RetrievalResult
-from app.services.answers import AnswerService
+from app.services.answers import FRESHNESS_GROUNDING_DISABLED_REFUSAL, AnswerService
 
 
 class FakeGeminiProvider(GeminiProvider):
@@ -183,6 +183,50 @@ async def test_answer_service_refuses_fabricated_citation_ids() -> None:
     assert answer.answer_text == ""
     assert answer.confidence_label == "low"
     assert answer.refusal_reason == "Generated citations did not map to retrieved evidence."
+
+
+async def test_answer_service_refuses_freshness_required_when_grounding_disabled() -> None:
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    async with engine.begin() as connection:
+        await connection.run_sync(Base.metadata.create_all)
+
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+    async with session_factory() as session:
+        query_run = QueryRun(
+            workspace_id="workspace-a",
+            conversation_id=None,
+            query_text="What is the latest policy?",
+            route="route_freshness_required",
+            mode="verified",
+            cache_status="miss",
+        )
+        session.add(query_run)
+        await session.commit()
+
+        provider = FakeGeminiProvider(
+            {"answer_text": "Stale answer.", "citation_chunk_ids": ["chunk-a"]}
+        )
+        service = AnswerService(
+            session=session,
+            gemini_provider=provider,
+            generation_model="gemini-2.5-flash-lite",
+        )
+
+        answer = await service.generate_answer(
+            retrieval=RetrievalResult(query_run_id=query_run.id, evidence=[_evidence()]),
+            query="What is the latest policy?",
+            mode="verified",
+            route="route_freshness_required",
+            freshness_label="freshness_required_grounding_disabled",
+            contradictions=[],
+        )
+
+    await engine.dispose()
+
+    assert answer.answer_text == ""
+    assert answer.confidence_label == "low"
+    assert answer.refusal_reason == FRESHNESS_GROUNDING_DISABLED_REFUSAL
+    assert provider.requests == []
 
 
 def test_evidence_context_treats_document_text_as_untrusted_evidence() -> None:
