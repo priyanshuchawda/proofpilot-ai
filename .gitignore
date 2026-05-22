@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.pyright/
+.venv/
+*.py[cod]
+
+# Node
+node_modules/
+.next/
+out/
+dist/
+coverage/
+playwright-report/
+test-results/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+
+# Local data
+.data/
+uploads/
+evals/results/*.json
+evals/results/*.jsonl
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
