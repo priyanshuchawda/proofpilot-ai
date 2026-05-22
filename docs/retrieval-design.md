@@ -32,6 +32,14 @@ Document ingestion currently persists redacted chunks and metadata. Dense vector
 - `EmbeddingIndexService.search_query` embeds the query and searches Qdrant through the `VectorStore` protocol.
 - Qdrant integration is opt-in for tests with `RUN_INFRA_INTEGRATION=1`.
 
+## Hybrid Evidence Ranking
+
+- Dense retrieval returns ordered chunk IDs from Qdrant and is filtered by workspace before evidence is exposed.
+- Keyword retrieval scores workspace chunks by normalized exact term overlap. This is deterministic and testable; PostgreSQL-specific full-text optimization can replace the internal scorer without changing the service contract.
+- Reciprocal Rank Fusion combines dense and keyword rankings. Chunks supported by both sources are marked `hybrid`.
+- Retrieval stores a `query_run` and final ranked `retrieval_candidate` rows so the UI can later inspect the trace.
+- Empty retrieval still stores the query run and returns no evidence, allowing later answer generation to choose a safe refusal.
+
 ## Citation Rule
 
 No supported citation means no confident factual claim. Unsupported answers must be downgraded or refused.
