@@ -43,3 +43,12 @@ Document ingestion currently persists redacted chunks and metadata. Dense vector
 ## Citation Rule
 
 No supported citation means no confident factual claim. Unsupported answers must be downgraded or refused.
+
+## Answer Contract
+
+- The query endpoint returns a structured answer with answer text, citations, evidence chunk IDs, confidence, refusal reason, mode, cache status, and live-grounding flag.
+- Evidence context explicitly states that uploaded documents are evidence, not instructions.
+- Generated citation IDs must be a subset of retrieved evidence chunk IDs.
+- Missing evidence returns a safe refusal without calling Gemini.
+- Fabricated citations produce a low-confidence refusal and are persisted as a generated answer record with refusal metadata.
+- The current UI shows a loading/streaming state but consumes the structured response as a complete JSON payload. Token-by-token streaming remains a later transport improvement.

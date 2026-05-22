@@ -9,6 +9,7 @@ Last updated: 2026-05-23
 - #5: Workspace, database and local infrastructure.
 - #7: Secure document upload and ingestion pipeline.
 - #9: Embeddings and Qdrant vector indexing.
+- #11: Hybrid retrieval and evidence ranking.
 
 ## Current Architecture Decisions
 
@@ -21,6 +22,7 @@ Last updated: 2026-05-23
 - Keep real Gemini smoke tests manual only behind `RUN_GEMINI_SMOKE=1`.
 - Use deterministic local embeddings for current vector plumbing and tests. Real Gemini embedding calls are deferred while live testing is constrained to `gemini-2.5-flash-lite`.
 - Hybrid retrieval uses deterministic Reciprocal Rank Fusion over dense Qdrant IDs and workspace-scoped keyword/exact matches, with trace rows persisted for inspection.
+- Cited answer generation validates generated citation IDs against retrieved evidence and refuses when evidence is missing or citations are fabricated.
 
 ## Commands That Passed
 
@@ -63,6 +65,11 @@ Last updated: 2026-05-23
 - Issue #11 focused tests: `uv run pytest tests/test_retrieval_fusion.py tests/test_hybrid_retrieval_service.py -q`
 - Issue #11 backend gates: `uv run ruff format --check .`, `uv run ruff check .`, `uv run pyright`, `uv run pytest`.
 - Issue #11 standard local gates: backend format, lint, pyright, pytest; frontend lint, typecheck, test, build; Docker Compose config; git diff check.
+- Issue #13 focused backend tests: `uv run pytest tests/test_query_api.py tests/test_citation_validation.py tests/test_answer_service.py tests/test_hybrid_retrieval_service.py -q`
+- Issue #13 focused frontend test: `pnpm test -- app/query-console.test.tsx`
+- Issue #13 backend gates: `uv run ruff format --check .`, `uv run ruff check .`, `uv run pyright`, `uv run pytest`.
+- Issue #13 standard local gates: backend format, lint, pyright, pytest; frontend lint, typecheck, test, build; Docker Compose config; git diff check.
+- Issue #13 live smoke: real `gemini-2.5-flash-lite` query orchestration returned a valid cited answer with one citation.
 
 ## Unresolved Risks
 
@@ -71,7 +78,9 @@ Last updated: 2026-05-23
 - In-app browser automation was unavailable in this session; Playwright was also not installed in the shared Node runtime. Issue 1 used HTTP smoke testing instead.
 - Local PostgreSQL uses host port `55432` to avoid a personal Postgres conflict on `5432`.
 - Issue #11 keyword retrieval currently uses deterministic exact term overlap over workspace chunks. PostgreSQL full-text optimization remains a later internal improvement behind the same service contract.
+- Issue #13 query UI currently consumes a full JSON response after showing a loading/streaming state; token-by-token SSE remains a later transport improvement.
+- Existing local Docker Postgres volume is not initialized with role `proofpilot`, so `uv run alembic upgrade head` is blocked on that local volume. No volume reset was performed.
 
 ## Next Issue
 
-- Finish Issue #11 PR after local checks/security checks pass.
+- Finish Issue #13 PR after local checks/security checks pass.

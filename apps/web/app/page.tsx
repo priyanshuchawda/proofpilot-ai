@@ -1,5 +1,7 @@
 import { Activity, Cpu, ShieldCheck } from "lucide-react";
 
+import { QueryConsole } from "./query-console";
+
 export default function Home() {
   return (
     <main className="min-h-screen bg-[#0a0f1a] text-[#eef4ff]">
@@ -49,6 +51,8 @@ export default function Home() {
             </div>
           </aside>
         </div>
+
+        <QueryConsole />
       </section>
     </main>
   );

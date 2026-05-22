@@ -43,3 +43,7 @@ Issue #9 adds an embedding/vector boundary with deterministic local embeddings f
 ## Hybrid Retrieval
 
 Issue #11 adds a retrieval service that embeds the query, requests dense Qdrant chunk IDs through the vector boundary, scores keyword/exact matches from workspace-scoped chunks, fuses candidate rankings with Reciprocal Rank Fusion, returns evidence metadata, and persists `query_run` plus `retrieval_candidate` trace rows. Generated answers and citation validation are still handled by later milestones.
+
+## Cited Answers
+
+Issue #13 adds `POST /api/v1/workspaces/{workspace_id}/query`, which orchestrates retrieval and answer generation through dependency-injected services. The backend builds an untrusted evidence context, asks Gemini for a strict cited JSON answer, validates citation chunk IDs against retrieved evidence, persists generated answers and cited evidence, and refuses when evidence is missing or citations are fabricated. Standard tests mock Gemini; local live testing remains limited to `gemini-2.5-flash-lite`.
