@@ -46,8 +46,10 @@ def get_query_service(
         generation_model=settings.gemini_generation_model,
     )
     return QueryService(
+        session=session,
         retrieval_service=retrieval_service,
         answer_service=answer_service,
+        grounding_enabled=settings.gemini_search_grounding_enabled,
     )
 
 

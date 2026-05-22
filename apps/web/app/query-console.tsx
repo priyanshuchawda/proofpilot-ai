@@ -21,6 +21,15 @@ const AnswerSchema = z.object({
   refusal_reason: z.string().nullable(),
   live_grounding_used: z.boolean(),
   mode: z.string(),
+  route: z.string(),
+  freshness_label: z.string(),
+  contradictions: z.array(
+    z.object({
+      claim_key: z.string(),
+      values: z.array(z.string()),
+      chunk_ids: z.array(z.string()),
+    }),
+  ),
   cache_status: z.string(),
 });
 
@@ -124,7 +133,7 @@ export function QueryConsole() {
         <div className="flex items-center justify-between gap-4">
           <h2 className="text-lg font-semibold text-white">Cited answer</h2>
           <span className="rounded-md border border-[#2b3344] px-2 py-1 text-xs text-[#b8c7dd]">
-            {answer?.mode ?? mode}
+            {answer?.route ?? mode}
           </span>
         </div>
 
@@ -139,6 +148,9 @@ export function QueryConsole() {
             )}
 
             <div className="flex flex-wrap gap-2">
+              <span className="rounded-md border border-[#2b3344] px-2 py-1 text-sm text-[#c8d6ea]">
+                {answer.freshness_label}
+              </span>
               {answer.citations.map((citation) => (
                 <span
                   className="inline-flex items-center gap-2 rounded-md border border-[#2b3344] bg-[#0c1320] px-2 py-1 text-sm text-[#c8d6ea]"
@@ -149,6 +161,15 @@ export function QueryConsole() {
                 </span>
               ))}
             </div>
+
+            {answer.contradictions.length > 0 ? (
+              <div className="rounded-md border border-[#5b3b2b] bg-[#22140d] p-3 text-sm text-[#fcd7a3]">
+                Conflicts found:{" "}
+                {answer.contradictions
+                  .map((contradiction) => contradiction.claim_key)
+                  .join(", ")}
+              </div>
+            ) : null}
 
             <div className="space-y-3">
               {answer.citations.map((citation) => (

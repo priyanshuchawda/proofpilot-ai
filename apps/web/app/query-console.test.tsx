@@ -27,6 +27,9 @@ test("submits a workspace query and renders cited evidence", async () => {
       refusal_reason: null,
       live_grounding_used: false,
       mode: "verified",
+      route: "route_document_verified",
+      freshness_label: "not_required",
+      contradictions: [],
       cache_status: "miss",
     }),
   });

@@ -76,6 +76,9 @@ async def test_answer_service_persists_valid_cited_answer() -> None:
             retrieval=RetrievalResult(query_run_id=query_run.id, evidence=[_evidence()]),
             query="What does ProofPilot require?",
             mode="verified",
+            route="route_document_verified",
+            freshness_label="not_required",
+            contradictions=[],
         )
 
         generated = (await session.execute(select(GeneratedAnswer))).scalars().all()
@@ -124,6 +127,9 @@ async def test_answer_service_refuses_when_no_evidence_exists() -> None:
             retrieval=RetrievalResult(query_run_id=query_run.id, evidence=[]),
             query="Unknown?",
             mode="verified",
+            route="route_no_evidence",
+            freshness_label="not_required",
+            contradictions=[],
         )
 
     await engine.dispose()
@@ -167,6 +173,9 @@ async def test_answer_service_refuses_fabricated_citation_ids() -> None:
             retrieval=RetrievalResult(query_run_id=query_run.id, evidence=[_evidence()]),
             query="What does ProofPilot require?",
             mode="verified",
+            route="route_document_verified",
+            freshness_label="not_required",
+            contradictions=[],
         )
 
     await engine.dispose()

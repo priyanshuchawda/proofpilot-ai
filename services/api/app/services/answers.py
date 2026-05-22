@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.ai.gemini import GeminiGenerateRequest, GeminiProvider
 from app.answers.citations import validate_citation_ids
 from app.answers.context import build_evidence_context
+from app.answers.contradictions import Contradiction
 from app.answers.schemas import AnswerResponse, Citation, GeminiCitedAnswer
 from app.db.models import CitedEvidence, GeneratedAnswer
 from app.retrieval.schemas import EvidenceChunk, RetrievalResult
@@ -28,11 +29,17 @@ class AnswerService:
         retrieval: RetrievalResult,
         query: str,
         mode: str,
+        route: str,
+        freshness_label: str,
+        contradictions: list[Contradiction],
     ) -> AnswerResponse:
         if not retrieval.evidence:
             return await self._persist_refusal(
                 query_run_id=retrieval.query_run_id,
                 mode=mode,
+                route=route,
+                freshness_label=freshness_label,
+                contradictions=contradictions,
                 confidence_label="none",
                 refusal_reason="No reliable evidence was found for this question.",
             )
@@ -54,6 +61,9 @@ class AnswerService:
             return await self._persist_refusal(
                 query_run_id=retrieval.query_run_id,
                 mode=mode,
+                route=route,
+                freshness_label=freshness_label,
+                contradictions=contradictions,
                 confidence_label="low",
                 refusal_reason="Generated citations did not map to retrieved evidence.",
             )
@@ -90,6 +100,9 @@ class AnswerService:
             confidence_label="medium",
             refusal_reason=None,
             mode=mode,
+            route=route,
+            freshness_label=freshness_label,
+            contradictions=contradictions,
         )
 
     def _build_prompt(self, *, query: str, evidence: list[EvidenceChunk]) -> str:
@@ -110,6 +123,9 @@ class AnswerService:
         *,
         query_run_id: str,
         mode: str,
+        route: str,
+        freshness_label: str,
+        contradictions: list[Contradiction],
         confidence_label: str,
         refusal_reason: str,
     ) -> AnswerResponse:
@@ -131,6 +147,9 @@ class AnswerService:
             confidence_label=confidence_label,
             refusal_reason=refusal_reason,
             mode=mode,
+            route=route,
+            freshness_label=freshness_label,
+            contradictions=contradictions,
         )
 
 

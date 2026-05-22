@@ -29,6 +29,9 @@ class FakeQueryService:
             confidence_label="medium",
             refusal_reason=None,
             mode=mode,
+            route="route_document_verified",
+            freshness_label="not_required",
+            contradictions=[],
         )
 
 

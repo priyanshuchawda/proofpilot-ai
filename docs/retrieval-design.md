@@ -52,3 +52,11 @@ No supported citation means no confident factual claim. Unsupported answers must
 - Missing evidence returns a safe refusal without calling Gemini.
 - Fabricated citations produce a low-confidence refusal and are persisted as a generated answer record with refusal metadata.
 - The current UI shows a loading/streaming state but consumes the structured response as a complete JSON payload. Token-by-token streaming remains a later transport improvement.
+
+## Routing And Verification
+
+- Fast Mode retrieves fewer candidates and skips deterministic contradiction detection.
+- Verified Mode retrieves more candidates, validates citations, and detects deterministic numeric contradictions in retrieved evidence.
+- Freshness-required questions are detected with explicit terms such as current, latest, today, version, pricing, release, and status.
+- Until web grounding is implemented, freshness-required answers carry `freshness_required_grounding_disabled` so the UI can avoid pretending the answer is current.
+- No-evidence retrieval routes to `route_no_evidence` and returns the existing safe refusal path.
