@@ -1,5 +1,11 @@
 from pydantic import BaseModel, Field
 
+from app.answers.contradictions import Contradiction
+
+
+def empty_contradictions() -> list[Contradiction]:
+    return []
+
 
 class Citation(BaseModel):
     chunk_id: str
@@ -18,6 +24,9 @@ class AnswerResponse(BaseModel):
     refusal_reason: str | None
     live_grounding_used: bool = False
     mode: str
+    route: str
+    freshness_label: str
+    contradictions: list[Contradiction] = Field(default_factory=empty_contradictions)
     cache_status: str = "miss"
 
 
