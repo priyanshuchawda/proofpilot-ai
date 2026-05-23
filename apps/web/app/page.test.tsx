@@ -1,13 +1,32 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
+import { afterEach, vi } from "vitest";
 
 import Home from "./page";
 
-test("renders the API health check status", () => {
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+test("renders the API health check status", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        service: "proofpilot-api",
+        status: "ok",
+        version: "0.1.0",
+      }),
+    }),
+  );
   render(<Home />);
 
   expect(screen.getByRole("heading", { name: "ProofPilot AI" })).toBeInTheDocument();
   expect(screen.getByText("API health")).toBeInTheDocument();
-  expect(screen.getByText("Not checked yet")).toBeInTheDocument();
+  expect(screen.getByText("Checking API")).toBeInTheDocument();
+  await waitFor(() => {
+    expect(screen.getByText("API healthy")).toBeInTheDocument();
+  });
   expect(screen.getByText("Gemini mode")).toBeInTheDocument();
   expect(screen.getByText("gemini-2.5-flash-lite only")).toBeInTheDocument();
   expect(screen.getByText("Free-tier mode")).toBeInTheDocument();

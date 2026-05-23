@@ -36,6 +36,7 @@ Gemini API access is backend-only. The frontend never receives `GEMINI_API_KEY`.
 - Local latency metrics.
 - Evaluation dashboard with deterministic metrics.
 - Generated TypeScript API client with OpenAPI drift check.
+- Live API health card for local demo readiness.
 
 ## Tech Stack
 
@@ -87,10 +88,13 @@ pnpm --filter @proofpilot/web dev
 
 Open `http://localhost:3000`.
 
+If another local project already owns port `8000`, run ProofPilot on another port and set `NEXT_PUBLIC_API_BASE_URL` before starting the frontend, for example `http://127.0.0.1:8010`.
+
 ## Environment Variables
 
 Use `.env.example` as the source of truth. Current development defaults use:
 
+- `NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000`
 - `GEMINI_GENERATION_MODEL=gemini-2.5-flash-lite`
 - `GEMINI_LIGHTWEIGHT_MODEL=gemini-2.5-flash-lite`
 - `GEMINI_FRESH_MODEL=gemini-2.5-flash-lite`

@@ -1,7 +1,7 @@
 # Demo Script
 
 1. Start Docker services, FastAPI, and Next.js locally.
-2. Show the privacy warning, free-tier mode, and disabled Search grounding status.
+2. Confirm the dashboard shows `API healthy`, then show the privacy warning, free-tier mode, and disabled Search grounding status.
 3. Create a workspace and upload only public demo documents.
 4. Confirm ingestion status reaches `ready`.
 5. Ask an answerable question in Fast Mode.
@@ -12,3 +12,5 @@
 10. Show docs and local quality-gate results. GitHub Actions are deferred until final hardening.
 
 Do not show `.env`, API keys, raw secrets, private documents, or screenshots containing credentials.
+
+If another local project owns port `8000`, run the backend on a free port and start the frontend with `NEXT_PUBLIC_API_BASE_URL` pointing to that local backend.

@@ -129,7 +129,7 @@ def generated_source(openapi: dict[str, Any]) -> str:
         "}",
         "",
         "export function createProofPilotClient(options: ProofPilotClientOptions = {}) {",
-        '  const baseUrl = normalizeBaseUrl(options.baseUrl ?? "http://localhost:8000");',
+        '  const baseUrl = normalizeBaseUrl(options.baseUrl ?? "http://127.0.0.1:8000");',
         "  const fetcher = options.fetch ?? fetch;",
         "",
         "  return {",
