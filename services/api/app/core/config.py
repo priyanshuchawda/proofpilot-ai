@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     gemini_embedding_dimension: int = 768
     gemini_embeddings_enabled: bool = False
     gemini_search_grounding_enabled: bool = False
+    upload_indexing_enabled: bool = True
     run_gemini_smoke: bool = False
 
 

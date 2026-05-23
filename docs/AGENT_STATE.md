@@ -31,6 +31,7 @@ Last updated: 2026-05-24
 - Current provider defaults prefer `gemini-3.1-flash-lite` for non-search generation and use `gemini-2.5-flash-lite` as the free-tier-safe Search-grounding fallback.
 - Keep real Gemini smoke tests manual only behind `RUN_GEMINI_SMOKE=1`.
 - Use deterministic local embeddings by default for current vector plumbing and tests. Real Gemini embeddings are opt-in with `GEMINI_EMBEDDINGS_ENABLED=true` and `gemini-embedding-2`.
+- Uploaded documents are indexed through `EmbeddingIndexService` after chunk persistence when `UPLOAD_INDEXING_ENABLED=true`; this is synchronous in the MVP and behind a `DocumentIndexer` boundary for later worker extraction.
 - Hybrid retrieval uses deterministic Reciprocal Rank Fusion over dense Qdrant IDs and workspace-scoped keyword/exact matches, with trace rows persisted for inspection.
 - Cited answer generation validates generated citation IDs against retrieved evidence and refuses when evidence is missing or citations are fabricated.
 - Query routing now labels Fast Mode, Verified Mode, no-evidence, and freshness-required routes. Verified Mode includes deterministic contradiction detection for simple numeric claims.
@@ -132,6 +133,10 @@ Last updated: 2026-05-24
 - Issue #37 opt-in live Gemini checks: `RUN_GEMINI_EMBEDDING_SMOKE=1 uv run pytest tests/test_gemini_embedding_smoke.py -q`; `RUN_GEMINI_SEARCH_SMOKE=1 uv run pytest tests/test_gemini_search_smoke.py -q`.
 - Issue #37 standard local gates: backend format, lint, pyright, pytest; `pnpm api:check`; frontend lint, typecheck, test, build; Docker Compose config; git diff check; secret-pattern scan with only intentional redaction fixture matches.
 - Issue #37 live browser smoke: API on `127.0.0.1:8010` showed `gemini-3.1-flash-lite` primary generation, `gemini-2.5-flash-lite` Search fallback, and Gemini embeddings enabled. The query UI returned a cited answer and persisted retrieval trace using the new runtime settings.
+- Issue #39 focused RED check: `uv run pytest tests/test_document_service_indexing.py -q` failed because `DocumentService` did not accept a document indexer.
+- Issue #39 focused GREEN checks: `uv run pytest tests/test_document_service_indexing.py tests/test_document_api.py -q`; backend focused ruff format, ruff check, and pyright.
+- Issue #39 standard local gates: backend format, lint, pyright, pytest; `pnpm api:check`; frontend lint, typecheck, test, build; Docker Compose config.
+- Issue #39 Docker-backed upload indexing smoke: feature-branch API on `127.0.0.1:8012` with `UPLOAD_INDEXING_ENABLED=true`, `QDRANT_URL=http://127.0.0.1:6333`, and deterministic embeddings uploaded a Markdown document and created 1 `embedding_record` with model `deterministic-local`.
 
 ## Unresolved Risks
 
@@ -149,4 +154,4 @@ Last updated: 2026-05-24
 
 ## Next Issue
 
-- Finish Issue #37 PR after full local checks pass.
+- Finish Issue #39 PR after full local checks and Docker-backed upload indexing smoke pass.
