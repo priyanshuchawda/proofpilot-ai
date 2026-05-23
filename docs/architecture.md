@@ -55,3 +55,7 @@ Issue #15 adds deterministic routing metadata for Fast Mode, Verified Mode, no-e
 ## Caching And Metrics
 
 Issue #19 adds workspace-scoped response cache keys that include index version, mode, and normalized query hash. Safe response caching is disabled for refusals, live-grounded answers, and freshness-required routes. Query execution persists local latency metrics for retrieval, answer generation, and total query time without storing document text in metric names.
+
+## Evaluation
+
+Issue #21 adds deterministic golden evaluation APIs and a dashboard. Evaluation summaries measure retrieval hit rate, citation validity, refusal correctness, contradiction correctness, latency p50/p95, cache hit behavior, and secret leakage count. These are automated checks, not model quality claims.

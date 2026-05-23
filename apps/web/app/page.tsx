@@ -1,5 +1,6 @@
 import { Activity, Cpu, ShieldCheck } from "lucide-react";
 
+import { EvaluationDashboard } from "./evaluation-dashboard";
 import { QueryConsole } from "./query-console";
 
 export default function Home() {
@@ -53,6 +54,7 @@ export default function Home() {
         </div>
 
         <QueryConsole />
+        <EvaluationDashboard />
       </section>
     </main>
   );

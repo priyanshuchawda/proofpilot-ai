@@ -13,6 +13,7 @@ Last updated: 2026-05-23
 - #13: Cited answer generation and streaming chat.
 - #15: Query routing, modes, and contradiction checks.
 - #17: Free-tier-safe current information grounding.
+- #19: Redis caching and latency optimization.
 
 ## Current Architecture Decisions
 
@@ -29,6 +30,7 @@ Last updated: 2026-05-23
 - Query routing now labels Fast Mode, Verified Mode, no-evidence, and freshness-required routes. Verified Mode includes deterministic contradiction detection for simple numeric claims.
 - Google Search grounding is feature-flagged and disabled by default. Freshness-required questions refuse clearly when grounding is disabled.
 - Response caching is workspace-scoped and index-version-scoped. Safe response caching excludes refusals, live-grounded answers, and freshness-required routes.
+- Evaluation runs are deterministic local checks and write ignored JSON summaries under `evals/results/`.
 
 ## Commands That Passed
 
@@ -84,6 +86,9 @@ Last updated: 2026-05-23
 - Issue #19 focused tests: `uv run pytest tests/test_cache_keys.py tests/test_query_cache.py tests/test_redis_cache_integration.py -q`
 - Issue #19 Redis integration: `RUN_INFRA_INTEGRATION=1 uv run pytest tests/test_redis_cache_integration.py -q`
 - Issue #19 standard local gates: backend format, lint, pyright, pytest; frontend lint, typecheck, test, build; Docker Compose config; git diff check.
+- Issue #21 focused backend tests: `uv run pytest tests/test_evaluation_metrics.py tests/test_evaluation_api.py -q`
+- Issue #21 focused frontend test: `pnpm test -- app/evaluation-dashboard.test.tsx`
+- Issue #21 standard local gates: backend format, lint, pyright, pytest; frontend lint, typecheck, test, build; Docker Compose config; git diff check.
 
 ## Unresolved Risks
 
@@ -99,4 +104,4 @@ Last updated: 2026-05-23
 
 ## Next Issue
 
-- Finish Issue #19 PR after local checks/security checks pass.
+- Finish Issue #21 PR after local checks/security checks pass.
