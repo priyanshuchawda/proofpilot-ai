@@ -14,6 +14,7 @@ Last updated: 2026-05-23
 - #15: Query routing, modes, and contradiction checks.
 - #17: Free-tier-safe current information grounding.
 - #19: Redis caching and latency optimization.
+- #21: Evaluation harness and observability dashboard.
 
 ## Current Architecture Decisions
 
@@ -31,6 +32,7 @@ Last updated: 2026-05-23
 - Google Search grounding is feature-flagged and disabled by default. Freshness-required questions refuse clearly when grounding is disabled.
 - Response caching is workspace-scoped and index-version-scoped. Safe response caching excludes refusals, live-grounded answers, and freshness-required routes.
 - Evaluation runs are deterministic local checks and write ignored JSON summaries under `evals/results/`.
+- Final documentation must keep GitHub Actions deferred until explicit final CI enablement.
 
 ## Commands That Passed
 
@@ -89,6 +91,8 @@ Last updated: 2026-05-23
 - Issue #21 focused backend tests: `uv run pytest tests/test_evaluation_metrics.py tests/test_evaluation_api.py -q`
 - Issue #21 focused frontend test: `pnpm test -- app/evaluation-dashboard.test.tsx`
 - Issue #21 standard local gates: backend format, lint, pyright, pytest; frontend lint, typecheck, test, build; Docker Compose config; git diff check.
+- Issue #23 focused frontend test: `pnpm test -- app/page.test.tsx`
+- Issue #23 standard local gates: backend format, lint, pyright, pytest; frontend lint, typecheck, test, build; Docker Compose config; git diff check; secret-pattern scan with only intentional redaction fixture/pattern matches.
 
 ## Unresolved Risks
 
@@ -104,4 +108,4 @@ Last updated: 2026-05-23
 
 ## Next Issue
 
-- Finish Issue #21 PR after local checks/security checks pass.
+- Finish Issue #23 PR after local checks/security checks pass.
