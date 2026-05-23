@@ -2,6 +2,8 @@
 
 ## Dataset Categories
 
+Golden cases live under `evals/datasets/golden-cases.json`.
+
 - Answerable document questions.
 - No-answer questions.
 - Conflicting-document questions.
@@ -21,4 +23,10 @@
 
 ## Reporting
 
-Evaluation runs write reproducible local reports under `evals/results/`. AI quality labels must be clearly separated from deterministic checks and human review.
+Evaluation runs write ignored local JSON reports under `evals/results/`. AI quality labels must be clearly separated from deterministic checks and human review.
+
+The MVP evaluation API exposes:
+
+- `POST /api/v1/evaluations/run`
+- `GET /api/v1/evaluations/runs/{run_id}`
+- `GET /api/v1/metrics/summary`
