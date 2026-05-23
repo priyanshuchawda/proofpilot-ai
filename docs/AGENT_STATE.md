@@ -19,6 +19,7 @@ Last updated: 2026-05-23
 - #25: Generated API client and local readiness cleanup.
 - #27: Streamed query transport.
 - #29: Live health card and browser smoke readiness.
+- #31: Workspace and document management UI.
 
 ## Current Architecture Decisions
 
@@ -40,6 +41,7 @@ Last updated: 2026-05-23
 - Query UI uses the streamed query route, which emits answer deltas and a final structured cited payload. Provider-native Gemini token streaming remains deferred.
 - Frontend local API defaults use `http://127.0.0.1:8000` to avoid Windows `localhost` ambiguity. Override `NEXT_PUBLIC_API_BASE_URL` when port `8000` is already owned by another local project.
 - Dashboard workflow now owns selected workspace state and wires workspace/document management into the query console.
+- Query UI now includes a retrieval trace panel built from the final structured answer payload. It shows route, cache status, confidence, freshness, live grounding usage, query run ID, evidence chunk IDs, cited chunk IDs, and contradiction keys without exposing hidden chain-of-thought.
 - Final documentation must keep GitHub Actions deferred until explicit final CI enablement.
 
 ## Commands That Passed
@@ -116,6 +118,10 @@ Last updated: 2026-05-23
 - Issue #31 focused GREEN checks: `pnpm test -- app/workspace-panel.test.tsx`; `pnpm test -- app/query-console.test.tsx`; `pnpm test -- app/page.test.tsx app/query-console.test.tsx app/workspace-panel.test.tsx`; `pnpm lint`; `pnpm typecheck`.
 - Issue #31 standard local gates: backend format, lint, pyright, pytest; `pnpm api:check`; frontend lint, typecheck, test, build; Docker Compose config.
 - Issue #31 Docker-backed smoke: Compose PostgreSQL/Redis/Qdrant running; `uv run alembic upgrade head` passed with `DATABASE_URL` pointed to `127.0.0.1:55432`; FastAPI ran on `127.0.0.1:8010`; browser verified workspace UI, created a workspace, API upload stored `proofpilot-smoke-demo.md`, and the refreshed dashboard showed `ready` with `1 chunks`.
+- Issue #33 focused RED check: `pnpm test -- app/query-console.test.tsx` failed on missing `Retrieval trace` region.
+- Issue #33 focused GREEN check: `pnpm test -- app/query-console.test.tsx` passed with 4 tests.
+- Issue #33 standard local gates: backend format, lint, pyright, pytest; `pnpm api:check`; frontend lint, typecheck, test, build; Docker Compose config.
+- Issue #33 live browser smoke: with API on `127.0.0.1:8010`, Docker-backed workspace `Smoke 1779556737178`, and live `gemini-2.5-flash-lite`, Verified Mode returned a cited answer and the dashboard showed the retrieval trace with route, cache miss, confidence, freshness, live grounding status, query run, evidence chunk, cited chunk, and contradiction fields.
 
 ## Unresolved Risks
 
@@ -133,4 +139,4 @@ Last updated: 2026-05-23
 
 ## Next Issue
 
-- Open and merge Issue #31 PR after final diff/secret checks pass.
+- Finish Issue #33 PR after full local checks pass.

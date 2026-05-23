@@ -30,6 +30,7 @@ Gemini API access is backend-only. The frontend never receives `GEMINI_API_KEY`.
 - Structured cited answers with citation ID validation.
 - Streamed query transport with answer deltas and final citation metadata.
 - Safe refusal when evidence is missing or citations are fabricated.
+- Retrieval trace panel showing route, cache status, freshness, grounding, query run, evidence chunks, and conflicts.
 - Fast Mode and Verified Mode routing.
 - Freshness-required detection with Search grounding disabled by default.
 - Deterministic contradiction detection for simple numeric claims.
@@ -182,7 +183,7 @@ These are not human-reviewed answer-quality scores.
 3. Create or select a workspace in the dashboard.
 4. Upload public demo documents.
 5. Ask a document question in Fast Mode.
-6. Switch to Verified Mode and inspect route, freshness, citations, and evidence.
+6. Switch to Verified Mode and inspect route, freshness, citations, evidence, and retrieval trace.
 7. Ask a no-evidence or freshness-required question and show refusal.
 8. Run the evaluation dashboard.
 9. Show local quality-gate results.

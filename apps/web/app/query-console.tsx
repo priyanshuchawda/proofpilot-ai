@@ -147,6 +147,8 @@ export function QueryConsole({ workspaceId }: { workspaceId?: string }) {
               </div>
             ) : null}
 
+            <RetrievalTrace answer={answer} />
+
             <div className="space-y-3">
               {answer.citations.map((citation) => (
                 <article
@@ -166,6 +168,48 @@ export function QueryConsole({ workspaceId }: { workspaceId?: string }) {
         ) : null}
       </div>
     </section>
+  );
+}
+
+function RetrievalTrace({ answer }: { answer: AnswerResponse }) {
+  const evidenceChunkIds = answer.evidence_chunk_ids.length
+    ? answer.evidence_chunk_ids.join(", ")
+    : "none";
+  const citedChunkIds = answer.citations.length
+    ? answer.citations.map((citation) => citation.chunk_id).join(", ")
+    : "none";
+  const contradictionKeys = (answer.contradictions ?? []).length
+    ? (answer.contradictions ?? []).map((contradiction) => contradiction.claim_key).join(", ")
+    : "none";
+
+  return (
+    <section
+      aria-label="Retrieval trace"
+      className="rounded-md border border-[#2b3344] bg-[#0c1320] p-3"
+      role="region"
+    >
+      <h3 className="text-sm font-semibold text-white">Retrieval trace</h3>
+      <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
+        <TraceItem label="Route" value={answer.route} />
+        <TraceItem label="Cache" value={answer.cache_status ?? "unknown"} />
+        <TraceItem label="Confidence" value={answer.confidence_label} />
+        <TraceItem label="Freshness" value={answer.freshness_label} />
+        <TraceItem label="Live grounding" value={answer.live_grounding_used ? "used" : "not used"} />
+        <TraceItem label="Query run" value={answer.query_run_id} />
+        <TraceItem label="Evidence chunks" value={evidenceChunkIds} />
+        <TraceItem label="Cited chunks" value={citedChunkIds} />
+        <TraceItem label="Contradictions" value={contradictionKeys} />
+      </dl>
+    </section>
+  );
+}
+
+function TraceItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="text-xs uppercase text-[#8ea4c2]">{label}</dt>
+      <dd className="mt-1 break-words text-[#dbe8f7]">{value}</dd>
+    </div>
   );
 }
 
