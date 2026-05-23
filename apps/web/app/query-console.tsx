@@ -1,6 +1,6 @@
 "use client";
 
-import { type AnswerResponse, createProofPilotClient } from "@proofpilot/generated-api-client";
+import { type AnswerResponse } from "@proofpilot/generated-api-client";
 import { FileText, Loader2, Send } from "lucide-react";
 import { FormEvent, useState } from "react";
 
@@ -13,6 +13,7 @@ export function QueryConsole() {
   const [question, setQuestion] = useState("");
   const [mode, setMode] = useState<Mode>("fast");
   const [answer, setAnswer] = useState<AnswerResponse | null>(null);
+  const [streamedText, setStreamedText] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -21,10 +22,20 @@ export function QueryConsole() {
     setIsLoading(true);
     setError(null);
     setAnswer(null);
+    setStreamedText("");
 
     try {
-      const apiClient = createProofPilotClient({ baseUrl: apiBaseUrl });
-      setAnswer(await apiClient.queryWorkspace(workspaceId, { query: question, mode }));
+      await streamQueryWorkspace({
+        mode,
+        onDelta: (text) => {
+          setStreamedText((current) => `${current}${text}`);
+        },
+        onFinal: (finalAnswer) => {
+          setAnswer(finalAnswer);
+        },
+        query: question,
+        workspaceId,
+      });
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Query failed.");
     } finally {
@@ -99,6 +110,9 @@ export function QueryConsole() {
 
         {error ? <p className="mt-4 text-sm text-[#fca5a5]">{error}</p> : null}
         {isLoading ? <p className="mt-4 text-sm text-[#b8c7dd]">Streaming response...</p> : null}
+        {streamedText && !answer ? (
+          <p className="mt-4 text-base leading-7 text-[#eef4ff]">{streamedText}</p>
+        ) : null}
         {answer ? (
           <div className="mt-4 space-y-4">
             {answer.refusal_reason ? (
@@ -151,4 +165,85 @@ export function QueryConsole() {
       </div>
     </section>
   );
+}
+
+async function streamQueryWorkspace({
+  mode,
+  onDelta,
+  onFinal,
+  query,
+  workspaceId,
+}: {
+  mode: Mode;
+  onDelta: (text: string) => void;
+  onFinal: (answer: AnswerResponse) => void;
+  query: string;
+  workspaceId: string;
+}) {
+  const response = await fetch(
+    `${apiBaseUrl}/api/v1/workspaces/${encodeURIComponent(workspaceId)}/query/stream`,
+    {
+      body: JSON.stringify({ query, mode }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error("Query failed. Check the workspace and backend status.");
+  }
+  if (!response.body) {
+    throw new Error("Streaming response body is unavailable.");
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    buffer += decoder.decode(value, { stream: !done });
+    buffer = processSseBuffer(buffer, onDelta, onFinal);
+    if (done) {
+      break;
+    }
+  }
+}
+
+function processSseBuffer(
+  buffer: string,
+  onDelta: (text: string) => void,
+  onFinal: (answer: AnswerResponse) => void,
+) {
+  const events = buffer.split("\n\n");
+  const remainder = events.pop() ?? "";
+
+  for (const eventBlock of events) {
+    const event = parseSseEvent(eventBlock);
+    if (!event) {
+      continue;
+    }
+    if (event.type === "answer_delta") {
+      const payload = JSON.parse(event.data) as { text: string };
+      onDelta(payload.text);
+    }
+    if (event.type === "final") {
+      onFinal(JSON.parse(event.data) as AnswerResponse);
+    }
+  }
+
+  return remainder;
+}
+
+function parseSseEvent(eventBlock: string) {
+  const eventLine = eventBlock.split("\n").find((line) => line.startsWith("event: "));
+  const dataLine = eventBlock.split("\n").find((line) => line.startsWith("data: "));
+  if (!eventLine || !dataLine) {
+    return null;
+  }
+
+  return {
+    data: dataLine.slice("data: ".length),
+    type: eventLine.slice("event: ".length),
+  };
 }

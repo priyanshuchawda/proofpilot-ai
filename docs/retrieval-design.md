@@ -51,7 +51,8 @@ No supported citation means no confident factual claim. Unsupported answers must
 - Generated citation IDs must be a subset of retrieved evidence chunk IDs.
 - Missing evidence returns a safe refusal without calling Gemini.
 - Fabricated citations produce a low-confidence refusal and are persisted as a generated answer record with refusal metadata.
-- The current UI shows a loading/streaming state but consumes the structured response as a complete JSON payload. Token-by-token streaming remains a later transport improvement.
+- The JSON query endpoint remains available for clients that want a complete structured payload.
+- The streaming query endpoint emits `answer_delta` events and a final structured `final` event with citation metadata. Provider-native token streaming remains a later Gemini provider enhancement.
 
 ## Routing And Verification
 

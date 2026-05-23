@@ -16,6 +16,7 @@ Last updated: 2026-05-23
 - #19: Redis caching and latency optimization.
 - #21: Evaluation harness and observability dashboard.
 - #23: Final UX, documentation, and demo readiness.
+- #25: Generated API client and local readiness cleanup.
 
 ## Current Architecture Decisions
 
@@ -34,6 +35,7 @@ Last updated: 2026-05-23
 - Response caching is workspace-scoped and index-version-scoped. Safe response caching excludes refusals, live-grounded answers, and freshness-required routes.
 - Evaluation runs are deterministic local checks and write ignored JSON summaries under `evals/results/`.
 - Frontend API helpers are generated from the FastAPI OpenAPI schema under `packages/generated-api-client` and checked with `pnpm api:check`.
+- Query UI uses the streamed query route, which emits answer deltas and a final structured cited payload. Provider-native Gemini token streaming remains deferred.
 - Final documentation must keep GitHub Actions deferred until explicit final CI enablement.
 
 ## Commands That Passed
@@ -99,6 +101,9 @@ Last updated: 2026-05-23
 - Issue #25 focused RED checks: `pnpm test -- app/api-client.test.ts` failed on unresolved generated client import; `uv run pytest tests/test_generate_api_client.py -q` failed on missing generator.
 - Issue #25 focused GREEN checks: `uv run pytest tests/test_generate_api_client.py -q`; `pnpm test -- app/api-client.test.ts`; `pnpm api:check`; `pnpm typecheck`.
 - Issue #25 standard local gates: backend format, lint, pyright, pytest; `pnpm api:check`; frontend lint, typecheck, test, build; Docker Compose config.
+- Issue #27 focused RED checks: `uv run pytest tests/test_query_api.py -q` failed on missing stream route; `pnpm test -- app/query-console.test.tsx` failed because the UI still called JSON and could not parse SSE.
+- Issue #27 focused GREEN checks: `uv run pytest tests/test_query_api.py -q`; `pnpm test -- app/query-console.test.tsx`; `pnpm typecheck`; `pnpm api:check`.
+- Issue #27 standard local gates: backend format, lint, pyright, pytest; `pnpm api:check`; frontend lint, typecheck, test, build; Docker Compose config.
 
 ## Unresolved Risks
 
@@ -107,7 +112,7 @@ Last updated: 2026-05-23
 - In-app browser automation was unavailable in this session; Playwright was also not installed in the shared Node runtime. Issue 1 used HTTP smoke testing instead.
 - Local PostgreSQL uses host port `55432` to avoid a personal Postgres conflict on `5432`.
 - Issue #11 keyword retrieval currently uses deterministic exact term overlap over workspace chunks. PostgreSQL full-text optimization remains a later internal improvement behind the same service contract.
-- Issue #13 query UI currently consumes a full JSON response after showing a loading/streaming state; token-by-token SSE remains a later transport improvement.
+- Provider-native Gemini token streaming remains a later enhancement. The current stream transport emits deltas from the finalized cited answer text.
 - Existing local Docker Postgres volume is not initialized with role `proofpilot`, so `uv run alembic upgrade head` is blocked on that local volume. No volume reset was performed.
 - Issue #17 adds the backend-only Google Search tool flag, but Search grounding remains disabled by default. Live grounding smoke is deferred until explicitly enabled because it spends free-tier grounding quota.
 - Issue #19 cache-hit latency metrics are not persisted because cache hits do not create a query run yet. Cache miss query runs persist retrieval, answer, and total latency metrics.
@@ -115,4 +120,4 @@ Last updated: 2026-05-23
 
 ## Next Issue
 
-- Finish Issue #25 PR after full local checks pass.
+- Finish Issue #27 PR after full local checks pass.
