@@ -1,6 +1,10 @@
 "use client";
 
-import { type AnswerResponse } from "@proofpilot/generated-api-client";
+import {
+  createProofPilotClient,
+  type AnswerResponse,
+  type QueryRunTraceResponse,
+} from "@proofpilot/generated-api-client";
 import { FileText, Loader2, Send } from "lucide-react";
 import { FormEvent, useState } from "react";
 
@@ -13,16 +17,30 @@ export function QueryConsole({ workspaceId }: { workspaceId?: string }) {
   const [question, setQuestion] = useState("");
   const [mode, setMode] = useState<Mode>("fast");
   const [answer, setAnswer] = useState<AnswerResponse | null>(null);
+  const [queryRunTrace, setQueryRunTrace] = useState<QueryRunTraceResponse | null>(null);
   const [streamedText, setStreamedText] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [traceError, setTraceError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const effectiveWorkspaceId = workspaceId || workspaceInput;
+
+  async function loadQueryRunTrace(queryRunId: string) {
+    setTraceError(null);
+    try {
+      const apiClient = createProofPilotClient({ baseUrl: apiBaseUrl });
+      setQueryRunTrace(await apiClient.getQueryRun(queryRunId));
+    } catch {
+      setTraceError("Persisted trace details unavailable.");
+    }
+  }
 
   async function submitQuery(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsLoading(true);
     setError(null);
     setAnswer(null);
+    setQueryRunTrace(null);
+    setTraceError(null);
     setStreamedText("");
 
     try {
@@ -33,6 +51,7 @@ export function QueryConsole({ workspaceId }: { workspaceId?: string }) {
         },
         onFinal: (finalAnswer) => {
           setAnswer(finalAnswer);
+          void loadQueryRunTrace(finalAnswer.query_run_id);
         },
         query: question,
         workspaceId: effectiveWorkspaceId,
@@ -147,7 +166,7 @@ export function QueryConsole({ workspaceId }: { workspaceId?: string }) {
               </div>
             ) : null}
 
-            <RetrievalTrace answer={answer} />
+            <RetrievalTrace answer={answer} queryRunTrace={queryRunTrace} traceError={traceError} />
 
             <div className="space-y-3">
               {answer.citations.map((citation) => (
@@ -171,7 +190,15 @@ export function QueryConsole({ workspaceId }: { workspaceId?: string }) {
   );
 }
 
-function RetrievalTrace({ answer }: { answer: AnswerResponse }) {
+function RetrievalTrace({
+  answer,
+  queryRunTrace,
+  traceError,
+}: {
+  answer: AnswerResponse;
+  queryRunTrace: QueryRunTraceResponse | null;
+  traceError: string | null;
+}) {
   const evidenceChunkIds = answer.evidence_chunk_ids.length
     ? answer.evidence_chunk_ids.join(", ")
     : "none";
@@ -200,6 +227,50 @@ function RetrievalTrace({ answer }: { answer: AnswerResponse }) {
         <TraceItem label="Cited chunks" value={citedChunkIds} />
         <TraceItem label="Contradictions" value={contradictionKeys} />
       </dl>
+      {traceError ? <p className="mt-3 text-sm text-[#fca5a5]">{traceError}</p> : null}
+      {queryRunTrace ? (
+        <div className="mt-4 grid gap-4">
+          <div>
+            <h4 className="text-xs font-semibold uppercase text-[#8ea4c2]">
+              Retrieved candidates
+            </h4>
+            {queryRunTrace.retrieval_candidates.length ? (
+              <ul className="mt-2 grid gap-2">
+                {queryRunTrace.retrieval_candidates.map((candidate) => (
+                  <li
+                    className="rounded-md border border-[#243247] p-2 text-sm text-[#dbe8f7]"
+                    key={`${candidate.source}-${candidate.rank}-${candidate.chunk_id}`}
+                  >
+                    <span className="font-semibold text-white">
+                      {candidate.source} #{candidate.rank}
+                    </span>
+                    <span className="ml-2">{candidate.source_filename ?? candidate.chunk_id}</span>
+                    <span className="ml-2 text-[#8ea4c2]">score {candidate.score}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-2 text-sm text-[#8ea4c2]">No persisted candidates.</p>
+            )}
+          </div>
+
+          {queryRunTrace.latency_metrics.length ? (
+            <div>
+              <h4 className="text-xs font-semibold uppercase text-[#8ea4c2]">Latency</h4>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {queryRunTrace.latency_metrics.map((metric) => (
+                  <span
+                    className="rounded-md border border-[#243247] px-2 py-1 text-sm text-[#dbe8f7]"
+                    key={`${metric.metric_name}-${metric.duration_ms}`}
+                  >
+                    {metric.metric_name}: {metric.duration_ms} ms
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
     </section>
   );
 }

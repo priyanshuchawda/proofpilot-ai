@@ -71,3 +71,45 @@ test("generated client runs deterministic evaluations", async () => {
     expect.objectContaining({ method: "POST" }),
   );
 });
+
+test("generated client fetches query-run trace details", async () => {
+  const fetcher = vi.fn(async () => ({
+    ok: true,
+    json: async () => ({
+      id: "query-run-1",
+      workspace_id: "workspace-1",
+      query_text: "What was retrieved?",
+      route: "route_document_verified",
+      mode: "verified",
+      cache_status: "miss",
+      retrieval_candidates: [
+        {
+          chunk_id: "chunk-a",
+          source: "hybrid",
+          rank: 1,
+          score: "0.75000000",
+          source_filename: "policy.md",
+          page_number: null,
+          section_heading: "Policy",
+        },
+      ],
+      cited_evidence: [],
+      generated_answer: null,
+      verification_result: null,
+      latency_metrics: [],
+    }),
+  })) as unknown as typeof fetch;
+
+  const client = createProofPilotClient({
+    baseUrl: "http://api.test/",
+    fetch: fetcher,
+  });
+
+  const trace = await client.getQueryRun("query-run-1");
+
+  expect(trace.retrieval_candidates[0].source).toBe("hybrid");
+  expect(fetcher).toHaveBeenCalledWith(
+    "http://api.test/api/v1/query-runs/query-run-1",
+    expect.objectContaining({ method: "GET" }),
+  );
+});
