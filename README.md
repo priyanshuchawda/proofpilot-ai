@@ -34,6 +34,7 @@ Gemini API access is backend-only. The frontend never receives `GEMINI_API_KEY`.
 - Workspace/index-version scoped response caching.
 - Local latency metrics.
 - Evaluation dashboard with deterministic metrics.
+- Generated TypeScript API client with OpenAPI drift check.
 
 ## Tech Stack
 
@@ -125,6 +126,7 @@ uv run pytest
 Frontend:
 
 ```powershell
+pnpm api:check
 pnpm lint
 pnpm typecheck
 pnpm test
@@ -191,7 +193,7 @@ These are not human-reviewed answer-quality scores.
 ## Roadmap
 
 - Wire upload-time background indexing.
-- Add generated OpenAPI TypeScript client.
+- Add token-by-token SSE transport.
 - Add richer trace drawer and document management UI.
 - Add optional live Search grounding path when explicitly enabled.
 - Add deeper evaluation datasets and human review workflow.

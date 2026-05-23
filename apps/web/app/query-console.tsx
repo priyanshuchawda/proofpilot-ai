@@ -1,39 +1,9 @@
 "use client";
 
+import { type AnswerResponse, createProofPilotClient } from "@proofpilot/generated-api-client";
 import { FileText, Loader2, Send } from "lucide-react";
 import { FormEvent, useState } from "react";
-import { z } from "zod";
 
-const CitationSchema = z.object({
-  chunk_id: z.string(),
-  source_filename: z.string(),
-  page_number: z.number().nullable(),
-  section_heading: z.string().nullable(),
-  evidence_text: z.string(),
-});
-
-const AnswerSchema = z.object({
-  query_run_id: z.string(),
-  answer_text: z.string(),
-  citations: z.array(CitationSchema),
-  evidence_chunk_ids: z.array(z.string()),
-  confidence_label: z.string(),
-  refusal_reason: z.string().nullable(),
-  live_grounding_used: z.boolean(),
-  mode: z.string(),
-  route: z.string(),
-  freshness_label: z.string(),
-  contradictions: z.array(
-    z.object({
-      claim_key: z.string(),
-      values: z.array(z.string()),
-      chunk_ids: z.array(z.string()),
-    }),
-  ),
-  cache_status: z.string(),
-});
-
-type Answer = z.infer<typeof AnswerSchema>;
 type Mode = "fast" | "verified";
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
@@ -42,7 +12,7 @@ export function QueryConsole() {
   const [workspaceId, setWorkspaceId] = useState("");
   const [question, setQuestion] = useState("");
   const [mode, setMode] = useState<Mode>("fast");
-  const [answer, setAnswer] = useState<Answer | null>(null);
+  const [answer, setAnswer] = useState<AnswerResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -53,18 +23,8 @@ export function QueryConsole() {
     setAnswer(null);
 
     try {
-      const response = await fetch(
-        `${apiBaseUrl}/api/v1/workspaces/${encodeURIComponent(workspaceId)}/query`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ query: question, mode }),
-        },
-      );
-      if (!response.ok) {
-        throw new Error("Query failed. Check the workspace and backend status.");
-      }
-      setAnswer(AnswerSchema.parse(await response.json()));
+      const apiClient = createProofPilotClient({ baseUrl: apiBaseUrl });
+      setAnswer(await apiClient.queryWorkspace(workspaceId, { query: question, mode }));
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Query failed.");
     } finally {
@@ -162,10 +122,10 @@ export function QueryConsole() {
               ))}
             </div>
 
-            {answer.contradictions.length > 0 ? (
+            {(answer.contradictions ?? []).length > 0 ? (
               <div className="rounded-md border border-[#5b3b2b] bg-[#22140d] p-3 text-sm text-[#fcd7a3]">
                 Conflicts found:{" "}
-                {answer.contradictions
+                {(answer.contradictions ?? [])
                   .map((contradiction) => contradiction.claim_key)
                   .join(", ")}
               </div>

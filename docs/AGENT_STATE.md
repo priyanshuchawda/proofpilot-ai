@@ -15,6 +15,7 @@ Last updated: 2026-05-23
 - #17: Free-tier-safe current information grounding.
 - #19: Redis caching and latency optimization.
 - #21: Evaluation harness and observability dashboard.
+- #23: Final UX, documentation, and demo readiness.
 
 ## Current Architecture Decisions
 
@@ -32,6 +33,7 @@ Last updated: 2026-05-23
 - Google Search grounding is feature-flagged and disabled by default. Freshness-required questions refuse clearly when grounding is disabled.
 - Response caching is workspace-scoped and index-version-scoped. Safe response caching excludes refusals, live-grounded answers, and freshness-required routes.
 - Evaluation runs are deterministic local checks and write ignored JSON summaries under `evals/results/`.
+- Frontend API helpers are generated from the FastAPI OpenAPI schema under `packages/generated-api-client` and checked with `pnpm api:check`.
 - Final documentation must keep GitHub Actions deferred until explicit final CI enablement.
 
 ## Commands That Passed
@@ -56,6 +58,7 @@ Last updated: 2026-05-23
 - `pnpm typecheck`
 - `pnpm test`
 - `pnpm build`
+- `pnpm api:check`
 - `docker compose -f infra/docker-compose.yml config`
 - Local smoke: `GET http://127.0.0.1:8000/api/v1/health`
 - Local smoke: `GET http://127.0.0.1:3000` contains `ProofPilot AI` and `API health`
@@ -93,6 +96,9 @@ Last updated: 2026-05-23
 - Issue #21 standard local gates: backend format, lint, pyright, pytest; frontend lint, typecheck, test, build; Docker Compose config; git diff check.
 - Issue #23 focused frontend test: `pnpm test -- app/page.test.tsx`
 - Issue #23 standard local gates: backend format, lint, pyright, pytest; frontend lint, typecheck, test, build; Docker Compose config; git diff check; secret-pattern scan with only intentional redaction fixture/pattern matches.
+- Issue #25 focused RED checks: `pnpm test -- app/api-client.test.ts` failed on unresolved generated client import; `uv run pytest tests/test_generate_api_client.py -q` failed on missing generator.
+- Issue #25 focused GREEN checks: `uv run pytest tests/test_generate_api_client.py -q`; `pnpm test -- app/api-client.test.ts`; `pnpm api:check`; `pnpm typecheck`.
+- Issue #25 standard local gates: backend format, lint, pyright, pytest; `pnpm api:check`; frontend lint, typecheck, test, build; Docker Compose config.
 
 ## Unresolved Risks
 
@@ -105,7 +111,8 @@ Last updated: 2026-05-23
 - Existing local Docker Postgres volume is not initialized with role `proofpilot`, so `uv run alembic upgrade head` is blocked on that local volume. No volume reset was performed.
 - Issue #17 adds the backend-only Google Search tool flag, but Search grounding remains disabled by default. Live grounding smoke is deferred until explicitly enabled because it spends free-tier grounding quota.
 - Issue #19 cache-hit latency metrics are not persisted because cache hits do not create a query run yet. Cache miss query runs persist retrieval, answer, and total latency metrics.
+- Next.js build no longer emits the parent-lockfile workspace-root warning after setting `turbopack.root`. It still emits an upstream `baseline-browser-mapping` staleness warning.
 
 ## Next Issue
 
-- Finish Issue #23 PR after local checks/security checks pass.
+- Finish Issue #25 PR after full local checks pass.

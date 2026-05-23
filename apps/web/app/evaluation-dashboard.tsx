@@ -1,33 +1,13 @@
 "use client";
 
+import { type EvaluationRunResponse, createProofPilotClient } from "@proofpilot/generated-api-client";
 import { BarChart3, Loader2, Play } from "lucide-react";
 import { useState } from "react";
-import { z } from "zod";
-
-const SummarySchema = z.object({
-  case_count: z.number(),
-  retrieval_hit_rate: z.number(),
-  citation_validity_rate: z.number(),
-  refusal_correctness_rate: z.number(),
-  contradiction_correctness_rate: z.number(),
-  latency_p50_ms: z.number(),
-  latency_p95_ms: z.number(),
-  cache_hit_rate: z.number(),
-  secret_leak_count: z.number(),
-});
-
-const EvaluationRunSchema = z.object({
-  run_id: z.string(),
-  status: z.string(),
-  summary: SummarySchema,
-});
-
-type EvaluationRun = z.infer<typeof EvaluationRunSchema>;
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
 export function EvaluationDashboard() {
-  const [run, setRun] = useState<EvaluationRun | null>(null);
+  const [run, setRun] = useState<EvaluationRunResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,13 +15,8 @@ export function EvaluationDashboard() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${apiBaseUrl}/api/v1/evaluations/run`, {
-        method: "POST",
-      });
-      if (!response.ok) {
-        throw new Error("Evaluation failed.");
-      }
-      setRun(EvaluationRunSchema.parse(await response.json()));
+      const apiClient = createProofPilotClient({ baseUrl: apiBaseUrl });
+      setRun(await apiClient.runEvaluation());
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Evaluation failed.");
     } finally {
