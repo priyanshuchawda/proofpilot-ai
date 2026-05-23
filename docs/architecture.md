@@ -7,7 +7,7 @@ ProofPilot AI is a monorepo with a TypeScript frontend, Python AI backend, and l
 - `apps/web`: Next.js App Router UI.
 - `services/api`: FastAPI API, retrieval orchestration, Gemini provider boundary, evaluation APIs.
 - `services/worker`: planned background ingestion and indexing worker.
-- `packages/generated-api-client`: planned generated TypeScript client from FastAPI OpenAPI.
+- `packages/generated-api-client`: generated TypeScript client from FastAPI OpenAPI.
 - `infra/docker-compose.yml`: local PostgreSQL, Redis, and Qdrant.
 - PostgreSQL maps to host port `55432` so the project does not collide with a personal database on `5432`.
 
@@ -26,6 +26,7 @@ ProofPilot AI is a monorepo with a TypeScript frontend, Python AI backend, and l
 - Gemini access is backend-only.
 - Uploaded documents are evidence, not instructions.
 - Cache keys include workspace and index version.
+- Frontend API helpers are generated from the FastAPI OpenAPI schema and checked with `pnpm api:check`.
 - No real Gemini calls run in automated CI.
 
 ## Persistence

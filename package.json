@@ -3,6 +3,8 @@
   "private": true,
   "packageManager": "pnpm@11.1.3",
   "scripts": {
+    "api:check": "cd services/api && uv run python ../../scripts/generate_api_client.py --check",
+    "api:generate": "cd services/api && uv run python ../../scripts/generate_api_client.py",
     "build": "pnpm --filter @proofpilot/web build",
     "lint": "pnpm --filter @proofpilot/web lint",
     "test": "pnpm --filter @proofpilot/web test",
