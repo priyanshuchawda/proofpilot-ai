@@ -12,6 +12,7 @@ Last updated: 2026-05-23
 - #11: Hybrid retrieval and evidence ranking.
 - #13: Cited answer generation and streaming chat.
 - #15: Query routing, modes, and contradiction checks.
+- #17: Free-tier-safe current information grounding.
 
 ## Current Architecture Decisions
 
@@ -27,6 +28,7 @@ Last updated: 2026-05-23
 - Cited answer generation validates generated citation IDs against retrieved evidence and refuses when evidence is missing or citations are fabricated.
 - Query routing now labels Fast Mode, Verified Mode, no-evidence, and freshness-required routes. Verified Mode includes deterministic contradiction detection for simple numeric claims.
 - Google Search grounding is feature-flagged and disabled by default. Freshness-required questions refuse clearly when grounding is disabled.
+- Response caching is workspace-scoped and index-version-scoped. Safe response caching excludes refusals, live-grounded answers, and freshness-required routes.
 
 ## Commands That Passed
 
@@ -79,6 +81,9 @@ Last updated: 2026-05-23
 - Issue #15 standard local gates: backend format, lint, pyright, pytest; frontend lint, typecheck, test, build; Docker Compose config; git diff check.
 - Issue #17 focused tests: `uv run pytest tests/test_answer_service.py tests/test_gemini_provider.py -q`
 - Issue #17 standard local gates: backend format, lint, pyright, pytest; frontend lint, typecheck, test, build; Docker Compose config; git diff check.
+- Issue #19 focused tests: `uv run pytest tests/test_cache_keys.py tests/test_query_cache.py tests/test_redis_cache_integration.py -q`
+- Issue #19 Redis integration: `RUN_INFRA_INTEGRATION=1 uv run pytest tests/test_redis_cache_integration.py -q`
+- Issue #19 standard local gates: backend format, lint, pyright, pytest; frontend lint, typecheck, test, build; Docker Compose config; git diff check.
 
 ## Unresolved Risks
 
@@ -90,7 +95,8 @@ Last updated: 2026-05-23
 - Issue #13 query UI currently consumes a full JSON response after showing a loading/streaming state; token-by-token SSE remains a later transport improvement.
 - Existing local Docker Postgres volume is not initialized with role `proofpilot`, so `uv run alembic upgrade head` is blocked on that local volume. No volume reset was performed.
 - Issue #17 adds the backend-only Google Search tool flag, but Search grounding remains disabled by default. Live grounding smoke is deferred until explicitly enabled because it spends free-tier grounding quota.
+- Issue #19 cache-hit latency metrics are not persisted because cache hits do not create a query run yet. Cache miss query runs persist retrieval, answer, and total latency metrics.
 
 ## Next Issue
 
-- Finish Issue #17 PR after local checks/security checks pass.
+- Finish Issue #19 PR after local checks/security checks pass.

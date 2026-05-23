@@ -51,3 +51,7 @@ Issue #13 adds `POST /api/v1/workspaces/{workspace_id}/query`, which orchestrate
 ## Query Routing
 
 Issue #15 adds deterministic routing metadata for Fast Mode, Verified Mode, no-evidence results, and freshness-required questions. Verified Mode detects simple numeric contradictions across retrieved evidence and returns contradiction details in the answer contract. Freshness-required questions are labeled clearly while Google Search grounding remains disabled until the dedicated grounding milestone.
+
+## Caching And Metrics
+
+Issue #19 adds workspace-scoped response cache keys that include index version, mode, and normalized query hash. Safe response caching is disabled for refusals, live-grounded answers, and freshness-required routes. Query execution persists local latency metrics for retrieval, answer generation, and total query time without storing document text in metric names.
