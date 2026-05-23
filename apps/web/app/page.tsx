@@ -1,8 +1,7 @@
 import { Cpu, SearchX, ShieldCheck } from "lucide-react";
 
-import { EvaluationDashboard } from "./evaluation-dashboard";
+import { DashboardWorkflow } from "./dashboard-workflow";
 import { HealthCard } from "./health-card";
-import { QueryConsole } from "./query-console";
 
 export default function Home() {
   return (
@@ -64,8 +63,7 @@ export default function Home() {
           </aside>
         </div>
 
-        <QueryConsole />
-        <EvaluationDashboard />
+        <DashboardWorkflow />
       </section>
     </main>
   );

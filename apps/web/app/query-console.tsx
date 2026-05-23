@@ -8,14 +8,15 @@ type Mode = "fast" | "verified";
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000";
 
-export function QueryConsole() {
-  const [workspaceId, setWorkspaceId] = useState("");
+export function QueryConsole({ workspaceId }: { workspaceId?: string }) {
+  const [workspaceInput, setWorkspaceInput] = useState("");
   const [question, setQuestion] = useState("");
   const [mode, setMode] = useState<Mode>("fast");
   const [answer, setAnswer] = useState<AnswerResponse | null>(null);
   const [streamedText, setStreamedText] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const effectiveWorkspaceId = workspaceId || workspaceInput;
 
   async function submitQuery(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -34,7 +35,7 @@ export function QueryConsole() {
           setAnswer(finalAnswer);
         },
         query: question,
-        workspaceId,
+        workspaceId: effectiveWorkspaceId,
       });
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Query failed.");
@@ -55,9 +56,10 @@ export function QueryConsole() {
             Workspace ID
             <input
               className="min-h-11 rounded-md border border-[#2b3344] bg-[#0c1320] px-3 text-base text-white outline-none focus:border-[#67e8f9]"
-              onChange={(event) => setWorkspaceId(event.target.value)}
+              readOnly={Boolean(workspaceId)}
+              onChange={(event) => setWorkspaceInput(event.target.value)}
               required
-              value={workspaceId}
+              value={effectiveWorkspaceId}
             />
           </label>
 

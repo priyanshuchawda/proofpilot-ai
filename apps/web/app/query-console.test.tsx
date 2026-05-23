@@ -125,6 +125,42 @@ test("renders answer deltas from the streamed query response", async () => {
   expect(screen.getByText("chunk-a")).toBeVisible();
 });
 
+test("uses the selected workspace id when provided by the dashboard", async () => {
+  const fetchMock = vi.fn().mockResolvedValue({
+    body: queryStream({
+      query_run_id: "query-run-selected",
+      answer_text: "Selected workspace answer. [chunk-a]",
+      citations: [],
+      evidence_chunk_ids: [],
+      confidence_label: "medium",
+      refusal_reason: null,
+      live_grounding_used: false,
+      mode: "fast",
+      route: "route_document_fast",
+      freshness_label: "not_required",
+      contradictions: [],
+      cache_status: "miss",
+    }),
+    ok: true,
+  });
+  vi.stubGlobal("fetch", fetchMock);
+
+  render(<QueryConsole workspaceId="workspace-selected" />);
+
+  fireEvent.change(screen.getByLabelText("Question"), {
+    target: { value: "Use selected workspace?" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Ask" }));
+
+  await waitFor(() => {
+    expect(screen.getByText("Selected workspace answer. [chunk-a]")).toBeVisible();
+  });
+  expect(fetchMock).toHaveBeenCalledWith(
+    "http://127.0.0.1:8000/api/v1/workspaces/workspace-selected/query/stream",
+    expect.objectContaining({ method: "POST" }),
+  );
+});
+
 function queryStream(finalPayload: object) {
   return new ReadableStream({
     start(controller) {
