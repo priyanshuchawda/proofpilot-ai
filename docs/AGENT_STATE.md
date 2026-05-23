@@ -17,6 +17,7 @@ Last updated: 2026-05-23
 - #21: Evaluation harness and observability dashboard.
 - #23: Final UX, documentation, and demo readiness.
 - #25: Generated API client and local readiness cleanup.
+- #27: Streamed query transport.
 
 ## Current Architecture Decisions
 
@@ -36,6 +37,7 @@ Last updated: 2026-05-23
 - Evaluation runs are deterministic local checks and write ignored JSON summaries under `evals/results/`.
 - Frontend API helpers are generated from the FastAPI OpenAPI schema under `packages/generated-api-client` and checked with `pnpm api:check`.
 - Query UI uses the streamed query route, which emits answer deltas and a final structured cited payload. Provider-native Gemini token streaming remains deferred.
+- Frontend local API defaults use `http://127.0.0.1:8000` to avoid Windows `localhost` ambiguity. Override `NEXT_PUBLIC_API_BASE_URL` when port `8000` is already owned by another local project.
 - Final documentation must keep GitHub Actions deferred until explicit final CI enablement.
 
 ## Commands That Passed
@@ -104,6 +106,10 @@ Last updated: 2026-05-23
 - Issue #27 focused RED checks: `uv run pytest tests/test_query_api.py -q` failed on missing stream route; `pnpm test -- app/query-console.test.tsx` failed because the UI still called JSON and could not parse SSE.
 - Issue #27 focused GREEN checks: `uv run pytest tests/test_query_api.py -q`; `pnpm test -- app/query-console.test.tsx`; `pnpm typecheck`; `pnpm api:check`.
 - Issue #27 standard local gates: backend format, lint, pyright, pytest; `pnpm api:check`; frontend lint, typecheck, test, build; Docker Compose config.
+- Issue #29 focused RED check: `pnpm test -- app/health-card.test.tsx` failed on missing `HealthCard`.
+- Issue #29 focused GREEN checks: `pnpm test -- app/health-card.test.tsx app/page.test.tsx`; `pnpm test -- app/health-card.test.tsx app/page.test.tsx app/query-console.test.tsx app/api-client.test.ts`; `pnpm api:check`; `pnpm typecheck`.
+- Issue #29 standard local gates: backend format, lint, pyright, pytest; `pnpm api:check`; frontend lint, typecheck, test, build; Docker Compose config.
+- Issue #29 browser smoke: FastAPI health ran on `127.0.0.1:8010` because port `8000` is owned by another local project; Next.js ran on `127.0.0.1:3000` with `NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8010`; in-app browser verified `ProofPilot AI`, `API healthy`, `proofpilot-api v0.1.0`, `gemini-2.5-flash-lite only`, and the privacy warning.
 
 ## Unresolved Risks
 
@@ -114,10 +120,12 @@ Last updated: 2026-05-23
 - Issue #11 keyword retrieval currently uses deterministic exact term overlap over workspace chunks. PostgreSQL full-text optimization remains a later internal improvement behind the same service contract.
 - Provider-native Gemini token streaming remains a later enhancement. The current stream transport emits deltas from the finalized cited answer text.
 - Existing local Docker Postgres volume is not initialized with role `proofpilot`, so `uv run alembic upgrade head` is blocked on that local volume. No volume reset was performed.
+- Docker Desktop is currently not running, so Docker-backed live upload/retrieval testing is blocked until the daemon starts.
+- Port `8000` is currently owned by an unrelated local `esp32-ai-builder` backend; use `NEXT_PUBLIC_API_BASE_URL` and an alternate backend port for ProofPilot smoke tests when needed.
 - Issue #17 adds the backend-only Google Search tool flag, but Search grounding remains disabled by default. Live grounding smoke is deferred until explicitly enabled because it spends free-tier grounding quota.
 - Issue #19 cache-hit latency metrics are not persisted because cache hits do not create a query run yet. Cache miss query runs persist retrieval, answer, and total latency metrics.
 - Next.js build no longer emits the parent-lockfile workspace-root warning after setting `turbopack.root`. It still emits an upstream `baseline-browser-mapping` staleness warning.
 
 ## Next Issue
 
-- Finish Issue #27 PR after full local checks pass.
+- Finish Issue #29 PR after full local checks pass.

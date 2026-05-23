@@ -52,7 +52,7 @@ test("submits a workspace query and renders cited evidence", async () => {
   expect(screen.getByText("chunk-a")).toBeVisible();
   expect(screen.getByText("policy.md")).toBeVisible();
   expect(fetchMock).toHaveBeenCalledWith(
-    "http://localhost:8000/api/v1/workspaces/workspace-a/query/stream",
+    "http://127.0.0.1:8000/api/v1/workspaces/workspace-a/query/stream",
     expect.objectContaining({
       method: "POST",
       body: JSON.stringify({

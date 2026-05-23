@@ -1,6 +1,7 @@
-import { Activity, Cpu, SearchX, ShieldCheck } from "lucide-react";
+import { Cpu, SearchX, ShieldCheck } from "lucide-react";
 
 import { EvaluationDashboard } from "./evaluation-dashboard";
+import { HealthCard } from "./health-card";
 import { QueryConsole } from "./query-console";
 
 export default function Home() {
@@ -24,15 +25,7 @@ export default function Home() {
           </div>
 
           <aside className="rounded-lg border border-[#243247] bg-[#101827] p-5 shadow-2xl shadow-black/20">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="text-sm font-medium text-[#b8c7dd]">API health</p>
-                <p className="mt-2 text-2xl font-semibold text-white">Not checked yet</p>
-              </div>
-              <div className="flex h-11 w-11 items-center justify-center rounded-md bg-[#12323a] text-[#67e8f9]">
-                <Activity aria-hidden="true" size={22} />
-              </div>
-            </div>
+            <HealthCard />
 
             <div className="mt-4 flex items-center justify-between gap-4 rounded-md border border-[#2b3344] bg-[#0c1320] p-4">
               <div>
