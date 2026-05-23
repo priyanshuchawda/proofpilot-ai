@@ -1,4 +1,4 @@
-import { Activity, Cpu, ShieldCheck } from "lucide-react";
+import { Activity, Cpu, SearchX, ShieldCheck } from "lucide-react";
 
 import { EvaluationDashboard } from "./evaluation-dashboard";
 import { QueryConsole } from "./query-console";
@@ -36,7 +36,7 @@ export default function Home() {
 
             <div className="mt-4 flex items-center justify-between gap-4 rounded-md border border-[#2b3344] bg-[#0c1320] p-4">
               <div>
-                <p className="text-sm font-medium text-[#b8c7dd]">Gemini mode</p>
+                <p className="text-sm font-medium text-[#b8c7dd]">Free-tier mode</p>
                 <p className="mt-1 text-base font-semibold text-white">
                   gemini-2.5-flash-lite only
                 </p>
@@ -46,9 +46,27 @@ export default function Home() {
               </div>
             </div>
 
+            <div className="mt-4 flex items-center justify-between gap-4 rounded-md border border-[#2b3344] bg-[#0c1320] p-4">
+              <div>
+                <p className="text-sm font-medium text-[#b8c7dd]">Gemini mode</p>
+                <p className="mt-1 text-base font-semibold text-white">
+                  Search grounding disabled by default
+                </p>
+              </div>
+              <div className="flex h-10 w-10 items-center justify-center rounded-md bg-[#1d2332] text-[#fcd34d]">
+                <SearchX aria-hidden="true" size={20} />
+              </div>
+            </div>
+
             <div className="mt-6 flex items-start gap-3 rounded-md border border-[#1f3b36] bg-[#0d211f] p-4 text-sm leading-6 text-[#b7f7dd]">
               <ShieldCheck aria-hidden="true" className="mt-0.5 shrink-0" size={18} />
-              <p>Gemini keys stay server-side. Uploads should use public demo documents only.</p>
+              <p>
+                <span>Gemini keys stay server-side.</span>{" "}
+                <span>Use public demo documents only.</span>{" "}
+                <span>
+                  Do not upload secrets, credentials, private keys, or confidential files.
+                </span>
+              </p>
             </div>
           </aside>
         </div>

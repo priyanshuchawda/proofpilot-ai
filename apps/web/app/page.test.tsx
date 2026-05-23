@@ -10,4 +10,7 @@ test("renders the API health check status", () => {
   expect(screen.getByText("Not checked yet")).toBeInTheDocument();
   expect(screen.getByText("Gemini mode")).toBeInTheDocument();
   expect(screen.getByText("gemini-2.5-flash-lite only")).toBeInTheDocument();
+  expect(screen.getByText("Free-tier mode")).toBeInTheDocument();
+  expect(screen.getByText("Search grounding disabled by default")).toBeInTheDocument();
+  expect(screen.getByText("Use public demo documents only.")).toBeInTheDocument();
 });
