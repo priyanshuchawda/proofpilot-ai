@@ -27,6 +27,7 @@ Gemini API access is backend-only. The frontend never receives `GEMINI_API_KEY`.
 - Qdrant vector indexing boundary.
 - Hybrid retrieval with dense IDs plus keyword scoring and Reciprocal Rank Fusion.
 - Structured cited answers with citation ID validation.
+- Streamed query transport with answer deltas and final citation metadata.
 - Safe refusal when evidence is missing or citations are fabricated.
 - Fast Mode and Verified Mode routing.
 - Freshness-required detection with Search grounding disabled by default.
@@ -184,7 +185,7 @@ These are not human-reviewed answer-quality scores.
 ## Honest Limitations
 
 - Search grounding is disabled by default and not live-smoked automatically.
-- Token-by-token SSE is not yet implemented; the UI shows a loading state and consumes structured JSON.
+- Provider-native token streaming is not yet implemented; the stream currently emits deltas from the finalized cited answer payload.
 - Deterministic local embeddings are used for current vector plumbing; real Gemini embedding calls are deferred.
 - Keyword retrieval currently uses deterministic exact term overlap rather than optimized PostgreSQL full-text ranking.
 - Evaluation outcomes are deterministic harness results, not human quality review.
@@ -193,7 +194,7 @@ These are not human-reviewed answer-quality scores.
 ## Roadmap
 
 - Wire upload-time background indexing.
-- Add token-by-token SSE transport.
+- Add provider-native Gemini token streaming behind the existing stream transport.
 - Add richer trace drawer and document management UI.
 - Add optional live Search grounding path when explicitly enabled.
 - Add deeper evaluation datasets and human review workflow.

@@ -47,7 +47,7 @@ Issue #11 adds a retrieval service that embeds the query, requests dense Qdrant 
 
 ## Cited Answers
 
-Issue #13 adds `POST /api/v1/workspaces/{workspace_id}/query`, which orchestrates retrieval and answer generation through dependency-injected services. The backend builds an untrusted evidence context, asks Gemini for a strict cited JSON answer, validates citation chunk IDs against retrieved evidence, persists generated answers and cited evidence, and refuses when evidence is missing or citations are fabricated. Standard tests mock Gemini; local live testing remains limited to `gemini-2.5-flash-lite`.
+Issue #13 adds `POST /api/v1/workspaces/{workspace_id}/query`, which orchestrates retrieval and answer generation through dependency-injected services. The backend builds an untrusted evidence context, asks Gemini for a strict cited JSON answer, validates citation chunk IDs against retrieved evidence, persists generated answers and cited evidence, and refuses when evidence is missing or citations are fabricated. Issue #27 adds `POST /api/v1/workspaces/{workspace_id}/query/stream`, which emits `text/event-stream` answer deltas followed by a final structured answer payload. Standard tests mock Gemini; local live testing remains limited to `gemini-2.5-flash-lite`.
 
 ## Query Routing
 

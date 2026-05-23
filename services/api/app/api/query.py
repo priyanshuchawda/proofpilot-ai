@@ -1,6 +1,9 @@
+import json
+from collections.abc import AsyncIterator
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -67,3 +70,34 @@ async def query_workspace(
         query=request.query,
         mode=request.mode,
     )
+
+
+@router.post("/api/v1/workspaces/{workspace_id}/query/stream")
+async def query_workspace_stream(
+    workspace_id: str,
+    request: QueryRequest,
+    service: Annotated[QueryService, Depends(get_query_service)],
+) -> StreamingResponse:
+    answer = await service.answer_workspace_query(
+        workspace_id=workspace_id,
+        query=request.query,
+        mode=request.mode,
+    )
+
+    async def events() -> AsyncIterator[str]:
+        visible_text = answer.refusal_reason or answer.answer_text
+        for delta in _answer_deltas(visible_text):
+            yield _sse_event("answer_delta", {"text": delta})
+        yield _sse_event("final", json.loads(answer.model_dump_json()))
+
+    return StreamingResponse(events(), media_type="text/event-stream")
+
+
+def _answer_deltas(text: str) -> list[str]:
+    words = text.split(" ")
+    return [f"{word} " if index < len(words) - 1 else word for index, word in enumerate(words)]
+
+
+def _sse_event(event: str, payload: object) -> str:
+    data = json.dumps(payload, separators=(",", ":"))
+    return f"event: {event}\ndata: {data}\n\n"
