@@ -7,8 +7,8 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.ai.embeddings import DeterministicEmbeddingProvider
-from app.ai.gemini import build_gemini_provider
+from app.ai.embeddings import build_embedding_provider
+from app.ai.gemini import build_gemini_provider, choose_search_grounding_model
 from app.answers.schemas import AnswerResponse
 from app.core.config import Settings, get_settings
 from app.db.session import get_db_session
@@ -32,12 +32,16 @@ def get_query_service(
 ) -> QueryService:
     embedding_service = EmbeddingIndexService(
         session=session,
-        embedding_provider=DeterministicEmbeddingProvider(),
+        embedding_provider=build_embedding_provider(settings),
         vector_store=QdrantVectorStore(
             url=settings.qdrant_url,
             collection="proofpilot_chunks",
         ),
-        embedding_model="deterministic-local",
+        embedding_model=(
+            settings.gemini_embedding_model
+            if settings.gemini_embeddings_enabled
+            else "deterministic-local"
+        ),
     )
     retrieval_service = HybridRetrievalService(
         session=session,
@@ -47,6 +51,7 @@ def get_query_service(
         session=session,
         gemini_provider=build_gemini_provider(settings),
         generation_model=settings.gemini_generation_model,
+        grounding_model=choose_search_grounding_model(settings),
     )
     return QueryService(
         session=session,

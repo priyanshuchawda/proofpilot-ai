@@ -11,10 +11,13 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     qdrant_url: str = "http://localhost:6333"
     gemini_api_key: str | None = None
-    gemini_generation_model: str = "gemini-2.5-flash-lite"
+    gemini_generation_model: str = "gemini-3.1-flash-lite"
     gemini_lightweight_model: str = "gemini-2.5-flash-lite"
-    gemini_fresh_model: str = "gemini-2.5-flash-lite"
+    gemini_fresh_model: str = "gemini-3.1-flash-lite"
+    gemini_search_grounding_fallback_model: str = "gemini-2.5-flash-lite"
     gemini_embedding_model: str = "gemini-embedding-2"
+    gemini_embedding_dimension: int = 768
+    gemini_embeddings_enabled: bool = False
     gemini_search_grounding_enabled: bool = False
     run_gemini_smoke: bool = False
 

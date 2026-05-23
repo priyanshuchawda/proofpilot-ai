@@ -6,6 +6,8 @@ from app.ai.gemini import (
     MissingGeminiApiKeyError,
     MockGeminiProvider,
     build_gemini_provider,
+    choose_search_grounding_model,
+    is_free_tier_search_grounding_model,
 )
 from app.core.config import Settings
 
@@ -46,3 +48,20 @@ def test_provider_factory_uses_mock_when_key_missing_in_development() -> None:
 def test_google_provider_requires_api_key() -> None:
     with pytest.raises(MissingGeminiApiKeyError):
         GoogleGenAIProvider(api_key=None)
+
+
+def test_search_grounding_model_guard_rejects_gemini_3_flash_lite_free_tier() -> None:
+    assert not is_free_tier_search_grounding_model("gemini-3.1-flash-lite")
+    assert not is_free_tier_search_grounding_model("gemini-3.1-flash-lite-preview")
+    assert is_free_tier_search_grounding_model("gemini-2.5-flash-lite")
+
+
+def test_search_grounding_model_falls_back_to_free_tier_safe_model() -> None:
+    settings = Settings(
+        gemini_fresh_model="gemini-3.1-flash-lite",
+        gemini_search_grounding_fallback_model="gemini-2.5-flash-lite",
+    )
+
+    selected = choose_search_grounding_model(settings)
+
+    assert selected == "gemini-2.5-flash-lite"

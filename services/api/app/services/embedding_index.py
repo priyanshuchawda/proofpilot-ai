@@ -61,6 +61,7 @@ class EmbeddingIndexService:
             EmbeddingRequest(
                 texts=[chunk.chunk_text for chunk in chunks_to_embed],
                 model=self._embedding_model,
+                kind="document",
             )
         )
         await self._vector_store.ensure_collection(dimension=embedding_response.dimension)
@@ -85,7 +86,7 @@ class EmbeddingIndexService:
 
     async def search_query(self, *, query: str, limit: int) -> list[str]:
         embedding_response = await self._embedding_provider.embed_texts(
-            EmbeddingRequest(texts=[query], model=self._embedding_model)
+            EmbeddingRequest(texts=[query], model=self._embedding_model, kind="query")
         )
         return await self._vector_store.search(
             vector=embedding_response.vectors[0],

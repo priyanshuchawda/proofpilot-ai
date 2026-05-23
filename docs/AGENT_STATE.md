@@ -28,13 +28,13 @@ Last updated: 2026-05-24
 - Use local Docker infrastructure for PostgreSQL, Redis, and Qdrant.
 - Prefer custom RAG over provider-managed File Search for the MVP so retrieval architecture is visible and testable.
 - Treat Gemini model IDs and Google Search grounding as configuration. Search grounding is disabled by default until the selected model is verified as free-tier-safe.
-- For current development/live testing, use only `gemini-2.5-flash-lite` for generation routes. Defer Gemini 3.5 model usage until final production-readiness review.
+- Current provider defaults prefer `gemini-3.1-flash-lite` for non-search generation and use `gemini-2.5-flash-lite` as the free-tier-safe Search-grounding fallback.
 - Keep real Gemini smoke tests manual only behind `RUN_GEMINI_SMOKE=1`.
-- Use deterministic local embeddings for current vector plumbing and tests. Real Gemini embedding calls are deferred while live testing is constrained to `gemini-2.5-flash-lite`.
+- Use deterministic local embeddings by default for current vector plumbing and tests. Real Gemini embeddings are opt-in with `GEMINI_EMBEDDINGS_ENABLED=true` and `gemini-embedding-2`.
 - Hybrid retrieval uses deterministic Reciprocal Rank Fusion over dense Qdrant IDs and workspace-scoped keyword/exact matches, with trace rows persisted for inspection.
 - Cited answer generation validates generated citation IDs against retrieved evidence and refuses when evidence is missing or citations are fabricated.
 - Query routing now labels Fast Mode, Verified Mode, no-evidence, and freshness-required routes. Verified Mode includes deterministic contradiction detection for simple numeric claims.
-- Google Search grounding is feature-flagged and disabled by default. Freshness-required questions refuse clearly when grounding is disabled.
+- Google Search grounding is feature-flagged and disabled by default. Freshness-required questions refuse clearly when grounding is disabled. When enabled, the backend chooses a free-tier-safe Search model instead of using Gemini 3.1 Flash-Lite for grounded prompts.
 - Response caching is workspace-scoped and index-version-scoped. Safe response caching excludes refusals, live-grounded answers, and freshness-required routes.
 - Evaluation runs are deterministic local checks and write ignored JSON summaries under `evals/results/`.
 - Frontend API helpers are generated from the FastAPI OpenAPI schema under `packages/generated-api-client` and checked with `pnpm api:check`.
@@ -127,11 +127,16 @@ Last updated: 2026-05-24
 - Issue #35 focused GREEN checks: `uv run pytest tests/test_query_runs_api.py -q`; `pnpm test -- app/api-client.test.ts`; `pnpm api:check`; `pnpm test -- app/query-console.test.tsx app/api-client.test.ts`.
 - Issue #35 standard local gates: backend format, lint, pyright, pytest; `pnpm api:check`; frontend lint, typecheck, test, build; Docker Compose config; git diff check; secret-pattern scan with only intentional redaction fixture matches.
 - Issue #35 live browser smoke: with Docker-backed API on `127.0.0.1:8010`, Next.js on `127.0.0.1:3000`, and live `gemini-2.5-flash-lite`, the query UI returned a cited answer and the retrieval trace displayed persisted `keyword #1` candidate metadata for `proofpilot-smoke-demo.md` plus answer, retrieval, and total latency metrics.
+- Issue #37 focused RED checks: `uv run pytest tests/test_gemini_provider.py tests/test_embeddings.py -q` failed on missing Search fallback and Gemini embedding provider; `uv run pytest tests/test_ai_settings.py -q` failed on missing settings fields; `pnpm api:check` failed on stale generated client; `pnpm test -- app/ai-settings-card.test.tsx` failed on missing settings component.
+- Issue #37 focused GREEN checks: `uv run pytest tests/test_gemini_provider.py tests/test_embeddings.py -q`; `uv run pytest tests/test_ai_settings.py tests/test_gemini_provider.py tests/test_embeddings.py tests/test_answer_service.py -q`; `pnpm test -- app/ai-settings-card.test.tsx app/page.test.tsx`.
+- Issue #37 opt-in live Gemini checks: `RUN_GEMINI_EMBEDDING_SMOKE=1 uv run pytest tests/test_gemini_embedding_smoke.py -q`; `RUN_GEMINI_SEARCH_SMOKE=1 uv run pytest tests/test_gemini_search_smoke.py -q`.
+- Issue #37 standard local gates: backend format, lint, pyright, pytest; `pnpm api:check`; frontend lint, typecheck, test, build; Docker Compose config; git diff check; secret-pattern scan with only intentional redaction fixture matches.
+- Issue #37 live browser smoke: API on `127.0.0.1:8010` showed `gemini-3.1-flash-lite` primary generation, `gemini-2.5-flash-lite` Search fallback, and Gemini embeddings enabled. The query UI returned a cited answer and persisted retrieval trace using the new runtime settings.
 
 ## Unresolved Risks
 
 - GitHub Actions are intentionally disabled for now to avoid spending Actions minutes before final hardening.
-- Gemini embedding and File Search pricing details must be rechecked before real Gemini embedding calls or managed File Search integration code are added.
+- File Search pricing details must be rechecked before managed File Search integration code is added.
 - In-app browser automation was unavailable in this session; Playwright was also not installed in the shared Node runtime. Issue 1 used HTTP smoke testing instead.
 - Local PostgreSQL uses host port `55432` to avoid a personal Postgres conflict on `5432`.
 - Issue #11 keyword retrieval currently uses deterministic exact term overlap over workspace chunks. PostgreSQL full-text optimization remains a later internal improvement behind the same service contract.
@@ -144,4 +149,4 @@ Last updated: 2026-05-24
 
 ## Next Issue
 
-- Verify current Gemini model, embedding, and Search grounding docs before changing provider defaults or enabling real embedding/search paths.
+- Finish Issue #37 PR after full local checks pass.

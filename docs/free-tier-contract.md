@@ -1,8 +1,8 @@
 # Gemini Free-Tier Contract
 
-Date verified: 2026-05-23
+Date verified: 2026-05-24
 
-Grounding re-check: 2026-05-23
+Grounding re-check: 2026-05-24
 
 Sources checked through the official Gemini API documentation MCP:
 
@@ -16,22 +16,23 @@ Sources checked through the official Gemini API documentation MCP:
 - https://ai.google.dev/gemini-api/docs/api-key
 - https://ai.google.dev/gemini-api/docs/libraries
 
-The Gemini documentation MCP was rate-limited during the 2026-05-23 grounding re-check, so the current grounding decision was verified directly against official `ai.google.dev` pages:
+The 2026-05-24 re-check was verified directly against official `ai.google.dev` pages:
 
 - https://ai.google.dev/gemini-api/docs/google-search
 - https://ai.google.dev/gemini-api/docs/pricing
 - https://ai.google.dev/gemini-api/docs/models/gemini
+- https://ai.google.dev/gemini-api/docs/rate-limits
 
 ## Selected Configuration Defaults
 
-- Development generation model: `gemini-2.5-flash-lite`
+- Development generation model: `gemini-3.1-flash-lite`
 - Development lightweight model: `gemini-2.5-flash-lite`
-- Development freshness model: `gemini-2.5-flash-lite` with Search grounding disabled by default
-- Later production review candidate: `gemini-3.5-flash`
-- Embedding candidate: `gemini-embedding-2`
+- Development freshness model: `gemini-3.1-flash-lite`
+- Search-grounding fallback model: `gemini-2.5-flash-lite`
+- Embedding model: `gemini-embedding-2`, disabled by default behind `GEMINI_EMBEDDINGS_ENABLED=false`
 - SDK: official Python `google-genai`
 
-All model IDs are configuration values, not hard-coded architecture assumptions. During MVP implementation and local live testing, only `gemini-2.5-flash-lite` is enabled for generation routes. Gemini 3.5 models are deferred until final production-readiness review.
+All model IDs are configuration values, not hard-coded architecture assumptions. Normal document-answer generation may use `gemini-3.1-flash-lite` when configured. Search grounding must use a model whose official pricing table marks free-tier grounding as available; if the freshness model is not free-tier-safe for Search, the backend selects `GEMINI_SEARCH_GROUNDING_FALLBACK_MODEL`.
 
 ## Free-Tier-Safe Capabilities
 
@@ -40,7 +41,8 @@ All model IDs are configuration values, not hard-coded architecture assumptions.
 - Structured JSON outputs for answer contracts and routing outputs.
 - Streaming generation for interactive responses.
 - Google Search grounding only when feature-flagged and only on models whose pricing table marks free-tier grounding as available.
-- As of the 2026-05-23 re-check, official pricing lists Gemini 2.5 Flash-Lite Search grounding as free tier up to 500 RPD shared with Flash RPD, and the Google Search docs list Gemini 2.5 Flash-Lite as supported.
+- As of the 2026-05-24 re-check, official pricing lists Gemini 2.5 Flash-Lite Search grounding as free tier up to 500 RPD shared with Flash RPD, while Gemini 3.1 Flash-Lite free-tier Search grounding is marked unavailable. ProofPilot therefore falls back to `gemini-2.5-flash-lite` for Search.
+- Gemini embeddings with `gemini-embedding-2` are free-tier available subject to rate limits and are opt-in through `GEMINI_EMBEDDINGS_ENABLED=true`.
 
 ## Disabled Or Deferred
 
@@ -48,19 +50,23 @@ All model IDs are configuration values, not hard-coded architecture assumptions.
 - Context caching is not used in the MVP. Some pricing rows mark it unavailable on free tier for selected models.
 - Google Maps grounding, computer use, custom tools endpoints, Vertex AI, and paid tiers are disabled.
 - Real Gemini smoke tests are manual only and guarded by `RUN_GEMINI_SMOKE=1`.
-- Real Gemini embedding calls are deferred during current development because live testing is limited to `gemini-2.5-flash-lite` generation only. The code uses a deterministic local embedding provider for tests and vector plumbing until the embedding model is explicitly re-enabled.
+- Real Gemini embedding calls are disabled by default for deterministic local testing. When `GEMINI_EMBEDDINGS_ENABLED=true` and `GEMINI_API_KEY` is present, the backend uses the official `google-genai` SDK with `gemini-embedding-2`; otherwise it falls back to deterministic local embeddings without exposing secrets.
 - Google Search grounding remains disabled by default even though Gemini 2.5 Flash-Lite is documented as free-tier-safe up to quota. Freshness-required questions refuse clearly unless `GEMINI_SEARCH_GROUNDING_ENABLED=true` is deliberately set.
+- Provider-managed File Search remains disabled. It can be investigated later behind a disabled-by-default adapter after another pricing and privacy review.
 
 ## Known Quotas And Degradation
 
 - Free-tier limits vary by selected model and tool. The app must surface quota errors without switching to paid routes.
 - Search grounding for Gemini 2.5 Flash and Flash-Lite is documented as free up to 500 requests per day shared across the Flash and Flash-Lite RPD. Paid tiers have higher free shared limits and then bill per grounded prompt.
-- Gemini 3 search grounding has separate monthly free prompt limits on supported models, but several Gemini 3 pricing rows mark free tier as not available. The app must require explicit model and feature-flag confirmation before enabling Gemini 3 search.
+- Gemini 3 Search grounding has separate free prompt language for supported models, but the Gemini 3.1 Flash-Lite pricing row marks free-tier Search grounding as unavailable. The app must not use Gemini 3.1 Flash-Lite for Search unless official pricing changes and this document is updated.
 - If quota is exhausted, the backend returns `route_quota_exhausted`, preserves retrieval evidence, and allows retry later.
 
 ## Live Smoke Result
 
 - 2026-05-23: Manual opt-in smoke test passed with `RUN_GEMINI_SMOKE=1` using `gemini-2.5-flash-lite`.
+- 2026-05-24: Provider fallback tests verify that `gemini-3.1-flash-lite` is not treated as free-tier-safe for Search and falls back to `gemini-2.5-flash-lite`.
+- 2026-05-24: Manual opt-in embedding smoke passed with `RUN_GEMINI_EMBEDDING_SMOKE=1` using `gemini-embedding-2`.
+- 2026-05-24: Manual opt-in Search grounding smoke passed with `RUN_GEMINI_SEARCH_SMOKE=1` using the configured free-tier-safe fallback model.
 - Standard tests remain mocked or skipped and do not require `GEMINI_API_KEY`.
 
 ## Privacy Contract
