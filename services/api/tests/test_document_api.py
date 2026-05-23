@@ -3,6 +3,7 @@ from collections.abc import AsyncIterator
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+from app.core.config import Settings, get_settings
 from app.db.base import Base
 from app.db.session import get_db_session
 from app.main import app
@@ -20,6 +21,7 @@ async def test_upload_list_and_status_for_text_document() -> None:
             yield session
 
     app.dependency_overrides[get_db_session] = test_session
+    app.dependency_overrides[get_settings] = lambda: Settings(upload_indexing_enabled=False)
     transport = ASGITransport(app=app)
     try:
         async with AsyncClient(transport=transport, base_url="http://testserver") as client:

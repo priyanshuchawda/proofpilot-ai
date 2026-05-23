@@ -39,7 +39,7 @@ The MVP ingestion path validates PDF/TXT/Markdown uploads, stores originals thro
 
 ## Vector Indexing
 
-Issue #9 adds an embedding/vector boundary with deterministic local embeddings for standard tests and Qdrant indexing behind a typed adapter. The indexing service persists `embedding_record` rows, upserts Qdrant points with chunk payloads, skips already-indexed `(chunk_id, content_hash, model)` records, and embeds queries before vector search. Issue #37 adds an opt-in Gemini embedding provider using `gemini-embedding-2`; deterministic local embeddings remain the default for tests and local zero-key operation.
+Issue #9 adds an embedding/vector boundary with deterministic local embeddings for standard tests and Qdrant indexing behind a typed adapter. The indexing service persists `embedding_record` rows, upserts Qdrant points with chunk payloads, skips already-indexed `(chunk_id, content_hash, model)` records, and embeds queries before vector search. Issue #37 adds an opt-in Gemini embedding provider using `gemini-embedding-2`; deterministic local embeddings remain the default for tests and local zero-key operation. Issue #39 wires document upload to the indexing boundary after chunk persistence, with the same service protocol available for a later worker handoff.
 
 ## Hybrid Retrieval
 

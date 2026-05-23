@@ -1,5 +1,6 @@
 from hashlib import sha256
 from pathlib import Path
+from typing import Protocol
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,10 +13,21 @@ from app.ingestion.storage import LocalFileStorage
 from app.ingestion.uploads import validate_upload_metadata
 
 
+class DocumentIndexer(Protocol):
+    async def index_document(self, *, document_id: str) -> int: ...
+
+
 class DocumentService:
-    def __init__(self, session: AsyncSession, storage_root: Path) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        storage_root: Path,
+        *,
+        document_indexer: DocumentIndexer | None = None,
+    ) -> None:
         self._session = session
         self._storage = LocalFileStorage(storage_root)
+        self._document_indexer = document_indexer
 
     async def ingest_upload(
         self,
@@ -85,8 +97,13 @@ class DocumentService:
                 )
             )
 
-        job.status = "ready"
         document.status = "ready"
+        await self._session.flush()
+        if self._document_indexer is not None:
+            job.status = "indexed"
+            await self._document_indexer.index_document(document_id=document.id)
+
+        job.status = "ready"
         await self._session.commit()
         await self._session.refresh(document)
         return document

@@ -26,6 +26,7 @@ Gemini API access is backend-only. The frontend never receives `GEMINI_API_KEY`.
 - Secret redaction before model-bound context.
 - Deterministic local embeddings by default, with opt-in Gemini embeddings for local live testing.
 - Qdrant vector indexing boundary.
+- Upload-time document indexing into Qdrant through the embedding service boundary.
 - Hybrid retrieval with dense IDs plus keyword scoring and Reciprocal Rank Fusion.
 - Structured cited answers with citation ID validation.
 - Streamed query transport with answer deltas and final citation metadata.
@@ -104,6 +105,7 @@ Use `.env.example` as the source of truth. Current development defaults use:
 - `GEMINI_EMBEDDING_MODEL=gemini-embedding-2`
 - `GEMINI_EMBEDDINGS_ENABLED=false`
 - `GEMINI_SEARCH_GROUNDING_ENABLED=false`
+- `UPLOAD_INDEXING_ENABLED=true`
 
 Search grounding remains disabled by default. When enabled, ProofPilot uses a free-tier-safe Search model fallback instead of sending grounded prompts through a model whose free-tier Search pricing is unavailable.
 
@@ -206,7 +208,7 @@ These are not human-reviewed answer-quality scores.
 
 ## Roadmap
 
-- Wire upload-time background indexing.
+- Move upload-time indexing into a separate background worker.
 - Add provider-native Gemini token streaming behind the existing stream transport.
 - Add richer trace drawer and document management UI.
 - Add optional live Search grounding path when explicitly enabled.

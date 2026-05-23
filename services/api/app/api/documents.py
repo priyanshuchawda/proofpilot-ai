@@ -5,10 +5,14 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.ai.embeddings import build_embedding_provider
+from app.core.config import Settings, get_settings
 from app.db.models import Document
 from app.db.session import get_db_session
 from app.ingestion.uploads import UnsupportedUploadError, UploadTooLargeError
 from app.services.documents import DocumentService
+from app.services.embedding_index import EmbeddingIndexService
+from app.vector.qdrant import QdrantVectorStore
 
 router = APIRouter(tags=["documents"])
 
@@ -29,8 +33,24 @@ class DocumentStatusResponse(BaseModel):
 
 def get_document_service(
     session: Annotated[AsyncSession, Depends(get_db_session)],
+    settings: Annotated[Settings, Depends(get_settings)],
 ) -> DocumentService:
-    return DocumentService(session, Path(".data/uploads"))
+    document_indexer = None
+    if settings.upload_indexing_enabled:
+        document_indexer = EmbeddingIndexService(
+            session=session,
+            embedding_provider=build_embedding_provider(settings),
+            vector_store=QdrantVectorStore(
+                url=settings.qdrant_url,
+                collection="proofpilot_chunks",
+            ),
+            embedding_model=(
+                settings.gemini_embedding_model
+                if settings.gemini_embeddings_enabled
+                else "deterministic-local"
+            ),
+        )
+    return DocumentService(session, Path(".data/uploads"), document_indexer=document_indexer)
 
 
 async def to_document_response(
