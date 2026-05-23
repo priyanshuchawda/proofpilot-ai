@@ -212,6 +212,73 @@ test("renders a retrieval trace from the final streamed answer", async () => {
   expect(within(trace!).getByText("pricing")).toBeVisible();
 });
 
+test("loads persisted retrieval candidates for the trace panel", async () => {
+  const fetchMock = vi
+    .fn()
+    .mockResolvedValueOnce({
+      body: queryStream({
+        query_run_id: "query-run-candidates",
+        answer_text: "Candidate-backed answer. [chunk-a]",
+        citations: [],
+        evidence_chunk_ids: ["chunk-a"],
+        confidence_label: "medium",
+        refusal_reason: null,
+        live_grounding_used: false,
+        mode: "verified",
+        route: "route_document_verified",
+        freshness_label: "not_required",
+        contradictions: [],
+        cache_status: "miss",
+      }),
+      ok: true,
+    })
+    .mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        id: "query-run-candidates",
+        workspace_id: "workspace-trace",
+        query_text: "Show candidates?",
+        route: "route_document_verified",
+        mode: "verified",
+        cache_status: "miss",
+        retrieval_candidates: [
+          {
+            chunk_id: "chunk-a",
+            source: "hybrid",
+            rank: 1,
+            score: "0.75000000",
+            source_filename: "policy.md",
+            page_number: null,
+            section_heading: "Eligibility",
+          },
+        ],
+        cited_evidence: [],
+        generated_answer: null,
+        verification_result: null,
+        latency_metrics: [{ metric_name: "retrieval_ms", duration_ms: 12 }],
+      }),
+    });
+  vi.stubGlobal("fetch", fetchMock);
+
+  render(<QueryConsole workspaceId="workspace-trace" />);
+
+  fireEvent.change(screen.getByLabelText("Question"), {
+    target: { value: "Show candidates?" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Ask" }));
+
+  await waitFor(() => {
+    expect(screen.getByText("Retrieved candidates")).toBeVisible();
+  });
+  expect(screen.getByText("hybrid #1")).toBeVisible();
+  expect(screen.getByText("policy.md")).toBeVisible();
+  expect(screen.getByText("retrieval_ms: 12 ms")).toBeVisible();
+  expect(fetchMock).toHaveBeenCalledWith(
+    "http://127.0.0.1:8000/api/v1/query-runs/query-run-candidates",
+    expect.objectContaining({ method: "GET" }),
+  );
+});
+
 function queryStream(finalPayload: object) {
   return new ReadableStream({
     start(controller) {

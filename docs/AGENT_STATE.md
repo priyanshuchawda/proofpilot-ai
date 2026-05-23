@@ -1,6 +1,6 @@
 # Agent State
 
-Last updated: 2026-05-23
+Last updated: 2026-05-24
 
 ## Completed Issues
 
@@ -42,6 +42,7 @@ Last updated: 2026-05-23
 - Frontend local API defaults use `http://127.0.0.1:8000` to avoid Windows `localhost` ambiguity. Override `NEXT_PUBLIC_API_BASE_URL` when port `8000` is already owned by another local project.
 - Dashboard workflow now owns selected workspace state and wires workspace/document management into the query console.
 - Query UI now includes a retrieval trace panel built from the final structured answer payload. It shows route, cache status, confidence, freshness, live grounding usage, query run ID, evidence chunk IDs, cited chunk IDs, and contradiction keys without exposing hidden chain-of-thought.
+- `GET /api/v1/query-runs/{query_run_id}` exposes persisted trace details for a single query run, including ordered retrieval candidates, cited evidence, generated answer, verification result, and latency metrics. The generated frontend client includes `getQueryRun`.
 - Final documentation must keep GitHub Actions deferred until explicit final CI enablement.
 
 ## Commands That Passed
@@ -122,6 +123,10 @@ Last updated: 2026-05-23
 - Issue #33 focused GREEN check: `pnpm test -- app/query-console.test.tsx` passed with 4 tests.
 - Issue #33 standard local gates: backend format, lint, pyright, pytest; `pnpm api:check`; frontend lint, typecheck, test, build; Docker Compose config.
 - Issue #33 live browser smoke: with API on `127.0.0.1:8010`, Docker-backed workspace `Smoke 1779556737178`, and live `gemini-2.5-flash-lite`, Verified Mode returned a cited answer and the dashboard showed the retrieval trace with route, cache miss, confidence, freshness, live grounding status, query run, evidence chunk, cited chunk, and contradiction fields.
+- Issue #35 focused RED checks: `uv run pytest tests/test_query_runs_api.py -q` failed on missing query-run detail endpoint; `pnpm test -- app/api-client.test.ts` failed on missing `getQueryRun`; `pnpm test -- app/query-console.test.tsx` failed on missing persisted candidate display.
+- Issue #35 focused GREEN checks: `uv run pytest tests/test_query_runs_api.py -q`; `pnpm test -- app/api-client.test.ts`; `pnpm api:check`; `pnpm test -- app/query-console.test.tsx app/api-client.test.ts`.
+- Issue #35 standard local gates: backend format, lint, pyright, pytest; `pnpm api:check`; frontend lint, typecheck, test, build; Docker Compose config; git diff check; secret-pattern scan with only intentional redaction fixture matches.
+- Issue #35 live browser smoke: with Docker-backed API on `127.0.0.1:8010`, Next.js on `127.0.0.1:3000`, and live `gemini-2.5-flash-lite`, the query UI returned a cited answer and the retrieval trace displayed persisted `keyword #1` candidate metadata for `proofpilot-smoke-demo.md` plus answer, retrieval, and total latency metrics.
 
 ## Unresolved Risks
 
@@ -139,4 +144,4 @@ Last updated: 2026-05-23
 
 ## Next Issue
 
-- Finish Issue #33 PR after full local checks pass.
+- Verify current Gemini model, embedding, and Search grounding docs before changing provider defaults or enabling real embedding/search paths.

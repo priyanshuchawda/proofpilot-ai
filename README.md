@@ -30,7 +30,7 @@ Gemini API access is backend-only. The frontend never receives `GEMINI_API_KEY`.
 - Structured cited answers with citation ID validation.
 - Streamed query transport with answer deltas and final citation metadata.
 - Safe refusal when evidence is missing or citations are fabricated.
-- Retrieval trace panel showing route, cache status, freshness, grounding, query run, evidence chunks, and conflicts.
+- Retrieval trace panel showing route, cache status, freshness, grounding, query run, retrieved candidates, evidence chunks, latency, and conflicts.
 - Fast Mode and Verified Mode routing.
 - Freshness-required detection with Search grounding disabled by default.
 - Deterministic contradiction detection for simple numeric claims.
