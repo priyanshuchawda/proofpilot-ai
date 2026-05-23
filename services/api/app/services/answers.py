@@ -22,10 +22,12 @@ class AnswerService:
         session: AsyncSession,
         gemini_provider: GeminiProvider,
         generation_model: str,
+        grounding_model: str | None = None,
     ) -> None:
         self._session = session
         self._gemini_provider = gemini_provider
         self._generation_model = generation_model
+        self._grounding_model = grounding_model or generation_model
 
     async def generate_answer(
         self,
@@ -65,8 +67,13 @@ class AnswerService:
         response = await self._gemini_provider.generate_text(
             GeminiGenerateRequest(
                 prompt=prompt,
-                model=self._generation_model,
+                model=(
+                    self._grounding_model
+                    if route == "route_freshness_required"
+                    else self._generation_model
+                ),
                 response_json_schema=GeminiCitedAnswer.model_json_schema(),
+                enable_google_search=route == "route_freshness_required",
             )
         )
         cited_answer = _parse_cited_answer(response.text)
@@ -95,7 +102,7 @@ class AnswerService:
                 answer_text=cited_answer.answer_text,
                 confidence_label="medium",
                 refusal_reason=None,
-                live_grounding_used=False,
+                live_grounding_used=route == "route_freshness_required",
             )
         )
         for citation in citations:
@@ -119,6 +126,7 @@ class AnswerService:
             mode=mode,
             route=route,
             freshness_label=freshness_label,
+            live_grounding_used=route == "route_freshness_required",
             contradictions=contradictions,
         )
 

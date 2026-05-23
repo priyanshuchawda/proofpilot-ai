@@ -229,6 +229,56 @@ async def test_answer_service_refuses_freshness_required_when_grounding_disabled
     assert provider.requests == []
 
 
+async def test_answer_service_uses_grounding_model_and_search_tool_for_freshness_route() -> None:
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    async with engine.begin() as connection:
+        await connection.run_sync(Base.metadata.create_all)
+
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+    async with session_factory() as session:
+        query_run = QueryRun(
+            workspace_id="workspace-a",
+            conversation_id=None,
+            query_text="What is the latest policy?",
+            route="route_freshness_required",
+            mode="verified",
+            cache_status="miss",
+        )
+        session.add(query_run)
+        await session.commit()
+
+        provider = FakeGeminiProvider(
+            {
+                "answer_text": "The latest policy still requires evidence. [chunk-a]",
+                "citation_chunk_ids": ["chunk-a"],
+            }
+        )
+        service = AnswerService(
+            session=session,
+            gemini_provider=provider,
+            generation_model="gemini-3.1-flash-lite",
+            grounding_model="gemini-2.5-flash-lite",
+        )
+
+        answer = await service.generate_answer(
+            retrieval=RetrievalResult(query_run_id=query_run.id, evidence=[_evidence()]),
+            query="What is the latest policy?",
+            mode="verified",
+            route="route_freshness_required",
+            freshness_label="freshness_required",
+            contradictions=[],
+        )
+
+        generated = (await session.execute(select(GeneratedAnswer))).scalars().all()
+
+    await engine.dispose()
+
+    assert provider.requests[0].model == "gemini-2.5-flash-lite"
+    assert provider.requests[0].enable_google_search
+    assert answer.live_grounding_used
+    assert generated[0].live_grounding_used
+
+
 def test_evidence_context_treats_document_text_as_untrusted_evidence() -> None:
     context = build_evidence_context(
         [

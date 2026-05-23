@@ -22,6 +22,24 @@ test("renders the API health check status", async () => {
           }),
         };
       }
+      if (url.endsWith("/api/v1/settings/ai")) {
+        return {
+          ok: true,
+          json: async () => ({
+            backend_only: true,
+            gemini_configured: true,
+            generation_model: "gemini-3.1-flash-lite",
+            lightweight_model: "gemini-2.5-flash-lite",
+            freshness_model: "gemini-3.1-flash-lite",
+            search_grounding_model: "gemini-2.5-flash-lite",
+            embedding_model: "gemini-embedding-2",
+            embedding_dimension: 768,
+            embeddings_enabled: false,
+            search_grounding_enabled: false,
+            live_smoke_enabled: false,
+          }),
+        };
+      }
 
       return {
         ok: true,
@@ -37,9 +55,12 @@ test("renders the API health check status", async () => {
   await waitFor(() => {
     expect(screen.getByText("API healthy")).toBeInTheDocument();
   });
+  await waitFor(() => {
+    expect(screen.getByText("gemini-3.1-flash-lite primary")).toBeInTheDocument();
+  });
   expect(screen.getByText("Gemini mode")).toBeInTheDocument();
-  expect(screen.getByText("gemini-2.5-flash-lite only")).toBeInTheDocument();
-  expect(screen.getByText("Free-tier mode")).toBeInTheDocument();
-  expect(screen.getByText("Search grounding disabled by default")).toBeInTheDocument();
+  expect(screen.getByText("Generation route")).toBeInTheDocument();
+  expect(screen.getByText("Search grounding disabled")).toBeInTheDocument();
+  expect(screen.getByText("Local embeddings active")).toBeInTheDocument();
   expect(screen.getByText("Use public demo documents only.")).toBeInTheDocument();
 });

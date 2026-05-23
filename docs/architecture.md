@@ -39,7 +39,7 @@ The MVP ingestion path validates PDF/TXT/Markdown uploads, stores originals thro
 
 ## Vector Indexing
 
-Issue #9 adds an embedding/vector boundary with deterministic local embeddings for standard tests and Qdrant indexing behind a typed adapter. The indexing service persists `embedding_record` rows, upserts Qdrant points with chunk payloads, skips already-indexed `(chunk_id, content_hash, model)` records, and embeds queries before vector search. Real Gemini embedding calls remain deferred while local live testing is constrained to `gemini-2.5-flash-lite` generation only.
+Issue #9 adds an embedding/vector boundary with deterministic local embeddings for standard tests and Qdrant indexing behind a typed adapter. The indexing service persists `embedding_record` rows, upserts Qdrant points with chunk payloads, skips already-indexed `(chunk_id, content_hash, model)` records, and embeds queries before vector search. Issue #37 adds an opt-in Gemini embedding provider using `gemini-embedding-2`; deterministic local embeddings remain the default for tests and local zero-key operation.
 
 ## Hybrid Retrieval
 
@@ -47,7 +47,7 @@ Issue #11 adds a retrieval service that embeds the query, requests dense Qdrant 
 
 ## Cited Answers
 
-Issue #13 adds `POST /api/v1/workspaces/{workspace_id}/query`, which orchestrates retrieval and answer generation through dependency-injected services. The backend builds an untrusted evidence context, asks Gemini for a strict cited JSON answer, validates citation chunk IDs against retrieved evidence, persists generated answers and cited evidence, and refuses when evidence is missing or citations are fabricated. Issue #27 adds `POST /api/v1/workspaces/{workspace_id}/query/stream`, which emits `text/event-stream` answer deltas followed by a final structured answer payload. Standard tests mock Gemini; local live testing remains limited to `gemini-2.5-flash-lite`.
+Issue #13 adds `POST /api/v1/workspaces/{workspace_id}/query`, which orchestrates retrieval and answer generation through dependency-injected services. The backend builds an untrusted evidence context, asks Gemini for a strict cited JSON answer, validates citation chunk IDs against retrieved evidence, persists generated answers and cited evidence, and refuses when evidence is missing or citations are fabricated. Issue #27 adds `POST /api/v1/workspaces/{workspace_id}/query/stream`, which emits `text/event-stream` answer deltas followed by a final structured answer payload. Standard tests mock Gemini. Issue #37 allows `gemini-3.1-flash-lite` for non-search generation while selecting a configured Gemini 2.5 fallback for free-tier-safe Search grounding.
 
 ## Query Routing
 

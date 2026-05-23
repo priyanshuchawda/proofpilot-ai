@@ -24,7 +24,7 @@ Gemini API access is backend-only. The frontend never receives `GEMINI_API_KEY`.
 - Workspace-scoped document ingestion for PDF, TXT, and Markdown.
 - Dashboard workspace creation/selection and document upload/listing UI backed by real API routes.
 - Secret redaction before model-bound context.
-- Deterministic local embeddings for development vector plumbing.
+- Deterministic local embeddings by default, with opt-in Gemini embeddings for local live testing.
 - Qdrant vector indexing boundary.
 - Hybrid retrieval with dense IDs plus keyword scoring and Reciprocal Rank Fusion.
 - Structured cited answers with citation ID validation.
@@ -38,7 +38,7 @@ Gemini API access is backend-only. The frontend never receives `GEMINI_API_KEY`.
 - Local latency metrics.
 - Evaluation dashboard with deterministic metrics.
 - Generated TypeScript API client with OpenAPI drift check.
-- Live API health card for local demo readiness.
+- Live API health and Gemini settings cards for local demo readiness.
 
 ## Tech Stack
 
@@ -97,12 +97,15 @@ If another local project already owns port `8000`, run ProofPilot on another por
 Use `.env.example` as the source of truth. Current development defaults use:
 
 - `NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000`
-- `GEMINI_GENERATION_MODEL=gemini-2.5-flash-lite`
+- `GEMINI_GENERATION_MODEL=gemini-3.1-flash-lite`
 - `GEMINI_LIGHTWEIGHT_MODEL=gemini-2.5-flash-lite`
-- `GEMINI_FRESH_MODEL=gemini-2.5-flash-lite`
+- `GEMINI_FRESH_MODEL=gemini-3.1-flash-lite`
+- `GEMINI_SEARCH_GROUNDING_FALLBACK_MODEL=gemini-2.5-flash-lite`
+- `GEMINI_EMBEDDING_MODEL=gemini-embedding-2`
+- `GEMINI_EMBEDDINGS_ENABLED=false`
 - `GEMINI_SEARCH_GROUNDING_ENABLED=false`
 
-Gemini 3.5 usage is deferred until the final production-readiness review.
+Search grounding remains disabled by default. When enabled, ProofPilot uses a free-tier-safe Search model fallback instead of sending grounded prompts through a model whose free-tier Search pricing is unavailable.
 
 ## Free-Tier Safety
 
@@ -160,6 +163,10 @@ Manual Gemini smoke:
 cd services/api
 $env:RUN_GEMINI_SMOKE='1'
 uv run pytest tests/test_gemini_smoke.py -q
+$env:RUN_GEMINI_EMBEDDING_SMOKE='1'
+uv run pytest tests/test_gemini_embedding_smoke.py -q
+$env:RUN_GEMINI_SEARCH_SMOKE='1'
+uv run pytest tests/test_gemini_search_smoke.py -q
 ```
 
 ## Evaluation Metrics
@@ -192,7 +199,7 @@ These are not human-reviewed answer-quality scores.
 
 - Search grounding is disabled by default and not live-smoked automatically.
 - Provider-native token streaming is not yet implemented; the stream currently emits deltas from the finalized cited answer payload.
-- Deterministic local embeddings are used for current vector plumbing; real Gemini embedding calls are deferred.
+- Deterministic local embeddings are the default; real Gemini embeddings are opt-in with `GEMINI_EMBEDDINGS_ENABLED=true`.
 - Keyword retrieval currently uses deterministic exact term overlap rather than optimized PostgreSQL full-text ranking.
 - Evaluation outcomes are deterministic harness results, not human quality review.
 - GitHub Actions are intentionally deferred until final hardening to avoid spending Actions minutes early.

@@ -4,6 +4,14 @@ from pydantic import BaseModel, Field
 
 from app.core.config import Settings
 
+FREE_TIER_SEARCH_GROUNDING_MODELS = frozenset(
+    {
+        "gemini-2.5-flash",
+        "gemini-2.5-flash-lite",
+        "gemini-2.5-flash-lite-preview-09-2025",
+    }
+)
+
 
 class MissingGeminiApiKeyError(RuntimeError):
     """Raised when the real Gemini provider is requested without a backend key."""
@@ -75,3 +83,13 @@ def build_gemini_provider(settings: Settings) -> GeminiProvider:
     if not settings.gemini_api_key and settings.proofpilot_env == "development":
         return MockGeminiProvider()
     return GoogleGenAIProvider(api_key=settings.gemini_api_key)
+
+
+def is_free_tier_search_grounding_model(model: str) -> bool:
+    return model in FREE_TIER_SEARCH_GROUNDING_MODELS
+
+
+def choose_search_grounding_model(settings: Settings) -> str:
+    if is_free_tier_search_grounding_model(settings.gemini_fresh_model):
+        return settings.gemini_fresh_model
+    return settings.gemini_search_grounding_fallback_model

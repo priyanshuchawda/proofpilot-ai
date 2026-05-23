@@ -22,7 +22,7 @@
 11. Validate citation IDs against retrieved chunks.
 12. Store query trace and latency metrics.
 
-Document ingestion currently persists redacted chunks and metadata. Dense vector indexing now has a service boundary that can index document chunks into Qdrant and embed queries before vector search. Standard tests use deterministic local embeddings so CI and local development do not require a Gemini key. Real Gemini embedding calls are intentionally deferred until the Flash-Lite-only live testing constraint is lifted or explicitly reviewed.
+Document ingestion currently persists redacted chunks and metadata. Dense vector indexing now has a service boundary that can index document chunks into Qdrant and embed queries before vector search. Standard tests use deterministic local embeddings so CI and local development do not require a Gemini key. Real Gemini embedding calls are available only when `GEMINI_EMBEDDINGS_ENABLED=true`; otherwise the deterministic provider remains active.
 
 ## Vector Indexing
 
