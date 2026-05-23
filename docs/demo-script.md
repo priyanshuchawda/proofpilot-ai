@@ -2,7 +2,7 @@
 
 1. Start Docker services, FastAPI, and Next.js locally.
 2. Confirm the dashboard shows `API healthy`, then show the privacy warning, free-tier mode, and disabled Search grounding status.
-3. Create a workspace and upload only public demo documents.
+3. Create or select a workspace in the dashboard and upload only public demo documents.
 4. Confirm ingestion status reaches `ready`.
 5. Ask an answerable question in Fast Mode.
 6. Switch to Verified Mode and show route, freshness label, citations, and evidence.

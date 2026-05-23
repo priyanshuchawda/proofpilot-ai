@@ -22,6 +22,7 @@ Gemini API access is backend-only. The frontend never receives `GEMINI_API_KEY`.
 ## Features
 
 - Workspace-scoped document ingestion for PDF, TXT, and Markdown.
+- Dashboard workspace creation/selection and document upload/listing UI backed by real API routes.
 - Secret redaction before model-bound context.
 - Deterministic local embeddings for development vector plumbing.
 - Qdrant vector indexing boundary.
@@ -178,7 +179,7 @@ These are not human-reviewed answer-quality scores.
 
 1. Start Docker, backend, and frontend.
 2. Confirm free-tier mode and privacy warning.
-3. Create a workspace through the API or existing UI flow.
+3. Create or select a workspace in the dashboard.
 4. Upload public demo documents.
 5. Ask a document question in Fast Mode.
 6. Switch to Verified Mode and inspect route, freshness, citations, and evidence.

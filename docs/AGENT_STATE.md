@@ -18,6 +18,7 @@ Last updated: 2026-05-23
 - #23: Final UX, documentation, and demo readiness.
 - #25: Generated API client and local readiness cleanup.
 - #27: Streamed query transport.
+- #29: Live health card and browser smoke readiness.
 
 ## Current Architecture Decisions
 
@@ -38,6 +39,7 @@ Last updated: 2026-05-23
 - Frontend API helpers are generated from the FastAPI OpenAPI schema under `packages/generated-api-client` and checked with `pnpm api:check`.
 - Query UI uses the streamed query route, which emits answer deltas and a final structured cited payload. Provider-native Gemini token streaming remains deferred.
 - Frontend local API defaults use `http://127.0.0.1:8000` to avoid Windows `localhost` ambiguity. Override `NEXT_PUBLIC_API_BASE_URL` when port `8000` is already owned by another local project.
+- Dashboard workflow now owns selected workspace state and wires workspace/document management into the query console.
 - Final documentation must keep GitHub Actions deferred until explicit final CI enablement.
 
 ## Commands That Passed
@@ -110,6 +112,10 @@ Last updated: 2026-05-23
 - Issue #29 focused GREEN checks: `pnpm test -- app/health-card.test.tsx app/page.test.tsx`; `pnpm test -- app/health-card.test.tsx app/page.test.tsx app/query-console.test.tsx app/api-client.test.ts`; `pnpm api:check`; `pnpm typecheck`.
 - Issue #29 standard local gates: backend format, lint, pyright, pytest; `pnpm api:check`; frontend lint, typecheck, test, build; Docker Compose config.
 - Issue #29 browser smoke: FastAPI health ran on `127.0.0.1:8010` because port `8000` is owned by another local project; Next.js ran on `127.0.0.1:3000` with `NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8010`; in-app browser verified `ProofPilot AI`, `API healthy`, `proofpilot-api v0.1.0`, `gemini-2.5-flash-lite only`, and the privacy warning.
+- Issue #31 focused RED checks: `pnpm test -- app/workspace-panel.test.tsx` failed on missing `WorkspacePanel`; `pnpm test -- app/query-console.test.tsx` failed because `QueryConsole` did not accept a selected workspace ID.
+- Issue #31 focused GREEN checks: `pnpm test -- app/workspace-panel.test.tsx`; `pnpm test -- app/query-console.test.tsx`; `pnpm test -- app/page.test.tsx app/query-console.test.tsx app/workspace-panel.test.tsx`; `pnpm lint`; `pnpm typecheck`.
+- Issue #31 standard local gates: backend format, lint, pyright, pytest; `pnpm api:check`; frontend lint, typecheck, test, build; Docker Compose config.
+- Issue #31 Docker-backed smoke: Compose PostgreSQL/Redis/Qdrant running; `uv run alembic upgrade head` passed with `DATABASE_URL` pointed to `127.0.0.1:55432`; FastAPI ran on `127.0.0.1:8010`; browser verified workspace UI, created a workspace, API upload stored `proofpilot-smoke-demo.md`, and the refreshed dashboard showed `ready` with `1 chunks`.
 
 ## Unresolved Risks
 
@@ -119,8 +125,7 @@ Last updated: 2026-05-23
 - Local PostgreSQL uses host port `55432` to avoid a personal Postgres conflict on `5432`.
 - Issue #11 keyword retrieval currently uses deterministic exact term overlap over workspace chunks. PostgreSQL full-text optimization remains a later internal improvement behind the same service contract.
 - Provider-native Gemini token streaming remains a later enhancement. The current stream transport emits deltas from the finalized cited answer text.
-- Existing local Docker Postgres volume is not initialized with role `proofpilot`, so `uv run alembic upgrade head` is blocked on that local volume. No volume reset was performed.
-- Docker Desktop is currently not running, so Docker-backed live upload/retrieval testing is blocked until the daemon starts.
+- Local `.env` may point `DATABASE_URL` at `localhost:5432`; Docker Compose PostgreSQL is exposed on `127.0.0.1:55432`, so local smoke commands should override `DATABASE_URL` or update the ignored `.env` value.
 - Port `8000` is currently owned by an unrelated local `esp32-ai-builder` backend; use `NEXT_PUBLIC_API_BASE_URL` and an alternate backend port for ProofPilot smoke tests when needed.
 - Issue #17 adds the backend-only Google Search tool flag, but Search grounding remains disabled by default. Live grounding smoke is deferred until explicitly enabled because it spends free-tier grounding quota.
 - Issue #19 cache-hit latency metrics are not persisted because cache hits do not create a query run yet. Cache miss query runs persist retrieval, answer, and total latency metrics.
@@ -128,4 +133,4 @@ Last updated: 2026-05-23
 
 ## Next Issue
 
-- Finish Issue #29 PR after full local checks pass.
+- Open and merge Issue #31 PR after final diff/secret checks pass.

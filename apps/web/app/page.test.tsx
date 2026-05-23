@@ -10,13 +10,23 @@ afterEach(() => {
 test("renders the API health check status", async () => {
   vi.stubGlobal(
     "fetch",
-    vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        service: "proofpilot-api",
-        status: "ok",
-        version: "0.1.0",
-      }),
+    vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/api/v1/health")) {
+        return {
+          ok: true,
+          json: async () => ({
+            service: "proofpilot-api",
+            status: "ok",
+            version: "0.1.0",
+          }),
+        };
+      }
+
+      return {
+        ok: true,
+        json: async () => [],
+      };
     }),
   );
   render(<Home />);
