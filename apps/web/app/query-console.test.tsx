@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, expect, test, vi } from "vitest";
 
 import { QueryConsole } from "./query-console";
@@ -49,7 +49,7 @@ test("submits a workspace query and renders cited evidence", async () => {
   await waitFor(() => {
     expect(screen.getByText("ProofPilot requires grounded evidence. [chunk-a]")).toBeVisible();
   });
-  expect(screen.getByText("chunk-a")).toBeVisible();
+  expect(screen.getAllByText("chunk-a")[0]).toBeVisible();
   expect(screen.getByText("policy.md")).toBeVisible();
   expect(fetchMock).toHaveBeenCalledWith(
     "http://127.0.0.1:8000/api/v1/workspaces/workspace-a/query/stream",
@@ -122,7 +122,7 @@ test("renders answer deltas from the streamed query response", async () => {
   await waitFor(() => {
     expect(screen.getByText("ProofPilot streams grounded answers. [chunk-a]")).toBeVisible();
   });
-  expect(screen.getByText("chunk-a")).toBeVisible();
+  expect(screen.getAllByText("chunk-a")[0]).toBeVisible();
 });
 
 test("uses the selected workspace id when provided by the dashboard", async () => {
@@ -159,6 +159,57 @@ test("uses the selected workspace id when provided by the dashboard", async () =
     "http://127.0.0.1:8000/api/v1/workspaces/workspace-selected/query/stream",
     expect.objectContaining({ method: "POST" }),
   );
+});
+
+test("renders a retrieval trace from the final streamed answer", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue({
+      body: queryStream({
+        query_run_id: "query-run-trace",
+        answer_text: "Traceable answer. [chunk-a]",
+        citations: [
+          {
+            chunk_id: "chunk-a",
+            document_id: "doc-a",
+            source_filename: "policy.md",
+            page_number: 2,
+            section_heading: "Eligibility",
+            evidence_text: "Only cited facts are shown.",
+          },
+        ],
+        evidence_chunk_ids: ["chunk-a", "chunk-b"],
+        confidence_label: "high",
+        refusal_reason: null,
+        live_grounding_used: false,
+        mode: "verified",
+        route: "route_document_verified",
+        freshness_label: "not_required",
+        contradictions: [{ claim_key: "pricing", candidate_chunk_ids: ["chunk-a", "chunk-b"] }],
+        cache_status: "miss",
+      }),
+      ok: true,
+    }),
+  );
+
+  render(<QueryConsole workspaceId="workspace-trace" />);
+
+  fireEvent.change(screen.getByLabelText("Question"), {
+    target: { value: "Show trace?" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Verified Mode" }));
+  fireEvent.click(screen.getByRole("button", { name: "Ask" }));
+
+  let trace: HTMLElement;
+  await waitFor(() => {
+    trace = screen.getByRole("region", { name: "Retrieval trace" });
+    expect(trace).toBeVisible();
+  });
+  expect(within(trace!).getByText("route_document_verified")).toBeVisible();
+  expect(within(trace!).getByText("miss")).toBeVisible();
+  expect(within(trace!).getByText("query-run-trace")).toBeVisible();
+  expect(within(trace!).getByText("chunk-a, chunk-b")).toBeVisible();
+  expect(within(trace!).getByText("pricing")).toBeVisible();
 });
 
 function queryStream(finalPayload: object) {

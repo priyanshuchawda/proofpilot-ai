@@ -5,7 +5,7 @@
 3. Create or select a workspace in the dashboard and upload only public demo documents.
 4. Confirm ingestion status reaches `ready`.
 5. Ask an answerable question in Fast Mode.
-6. Switch to Verified Mode and show route, freshness label, citations, and evidence.
+6. Switch to Verified Mode and show route, freshness label, citations, evidence, and retrieval trace.
 7. Ask a no-evidence or freshness-required question and show safe refusal.
 8. Ask a conflicting-source question and show contradiction metadata when available.
 9. Run the evaluation dashboard and identify deterministic metrics.
