@@ -62,3 +62,11 @@ No supported citation means no confident factual claim. Unsupported answers must
 - No-evidence retrieval routes to `route_no_evidence` and returns the existing safe refusal path.
 - When Search grounding is disabled, freshness-required answers refuse rather than returning stale uploaded-document-only facts as current information.
 - Google Search grounding plumbing is backend-only and feature-flagged; it remains off by default to avoid accidental quota use.
+
+## Cache Safety
+
+- Response cache keys include workspace ID, index version, mode, and normalized query digest.
+- Cache hits are marked in the answer contract and do not run retrieval or Gemini.
+- Safe response caching excludes refusals, live-grounded answers, and freshness-required routes.
+- Redis is accessed behind a cache protocol; standard tests use an in-memory backend.
+- Redis integration is opt-in with `RUN_INFRA_INTEGRATION=1`.
