@@ -1,14 +1,11 @@
-import re
-
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import DocumentChunk, QueryRun, RetrievalCandidate
 from app.retrieval.fusion import RankedCandidate, fuse_ranked_candidates
+from app.retrieval.keyword import KeywordRetriever
 from app.retrieval.schemas import EvidenceChunk, RetrievalResult
 from app.services.embedding_index import EmbeddingIndexService
-
-TOKEN_PATTERN = re.compile(r"[a-z0-9]+")
 
 
 class HybridRetrievalService:
@@ -17,11 +14,13 @@ class HybridRetrievalService:
         *,
         session: AsyncSession,
         embedding_service: EmbeddingIndexService,
+        keyword_retriever: KeywordRetriever,
         dense_limit: int = 12,
         keyword_limit: int = 12,
     ) -> None:
         self._session = session
         self._embedding_service = embedding_service
+        self._keyword_retriever = keyword_retriever
         self._dense_limit = dense_limit
         self._keyword_limit = keyword_limit
 
@@ -45,7 +44,11 @@ class HybridRetrievalService:
         await self._session.flush()
 
         dense = await self._dense_candidates(workspace_id=workspace_id, query=query)
-        keyword = await self._keyword_candidates(workspace_id=workspace_id, query=query)
+        keyword = await self._keyword_retriever.retrieve(
+            workspace_id=workspace_id,
+            query=query,
+            limit=self._keyword_limit,
+        )
         fused = fuse_ranked_candidates(dense=dense, keyword=keyword, limit=limit)
 
         chunks = await self._chunks_by_id(
@@ -106,47 +109,6 @@ class HybridRetrievalService:
             if chunk_id in chunks
         ]
 
-    async def _keyword_candidates(
-        self,
-        *,
-        workspace_id: str,
-        query: str,
-    ) -> list[RankedCandidate]:
-        query_terms = set(_tokens(query))
-        if not query_terms:
-            return []
-
-        chunks = (
-            (
-                await self._session.execute(
-                    select(DocumentChunk)
-                    .where(DocumentChunk.workspace_id == workspace_id)
-                    .order_by(DocumentChunk.chunk_order)
-                )
-            )
-            .scalars()
-            .all()
-        )
-        scored: list[tuple[DocumentChunk, float]] = []
-        for chunk in chunks:
-            chunk_terms = set(_tokens(chunk.chunk_text))
-            overlap = len(query_terms & chunk_terms)
-            if overlap == 0:
-                continue
-            phrase_bonus = 1.0 if query.lower() in chunk.chunk_text.lower() else 0.0
-            scored.append((chunk, float(overlap) + phrase_bonus))
-
-        scored.sort(key=lambda item: (-item[1], item[0].chunk_order, item[0].id))
-        return [
-            RankedCandidate(
-                chunk_id=chunk.id,
-                source="keyword",
-                rank=rank,
-                score=score,
-            )
-            for rank, (chunk, score) in enumerate(scored[: self._keyword_limit], start=1)
-        ]
-
     async def _chunks_by_id(
         self,
         *,
@@ -168,7 +130,3 @@ class HybridRetrievalService:
             .all()
         )
         return {chunk.id: chunk for chunk in chunks}
-
-
-def _tokens(text: str) -> list[str]:
-    return TOKEN_PATTERN.findall(text.lower())

@@ -43,7 +43,7 @@ Issue #9 adds an embedding/vector boundary with deterministic local embeddings f
 
 ## Hybrid Retrieval
 
-Issue #11 adds a retrieval service that embeds the query, requests dense Qdrant chunk IDs through the vector boundary, scores keyword/exact matches from workspace-scoped chunks, fuses candidate rankings with Reciprocal Rank Fusion, returns evidence metadata, and persists `query_run` plus `retrieval_candidate` trace rows. Generated answers and citation validation are still handled by later milestones.
+Issue #11 adds a retrieval service that embeds the query, requests dense Qdrant chunk IDs through the vector boundary, fuses candidate rankings with Reciprocal Rank Fusion, returns evidence metadata, and persists `query_run` plus `retrieval_candidate` trace rows. Issue #49 moves production keyword retrieval to workspace-scoped PostgreSQL full-text ranking over chunk headings and content, protected by a GIN expression index; SQLite unit tests inject deterministic term scoring through the same retriever protocol.
 
 ## Cited Answers
 

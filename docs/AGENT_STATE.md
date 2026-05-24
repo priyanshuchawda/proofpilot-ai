@@ -23,10 +23,11 @@ Last updated: 2026-05-24
 - #41: Complete freshness web grounding path.
 - #43: Restore Tailwind utility styling and visual smoke coverage.
 - #45: Add observable free-tier fallback for document answer generation.
+- #46: Fix idempotent Qdrant collection reuse during indexed upload.
 
 ## Current Issue
 
-- #46: Fix idempotent Qdrant collection reuse during indexed upload. Implementation is in progress on `fix/46-qdrant-collection-reuse`.
+- #49: Implement PostgreSQL full-text keyword retrieval. Implementation is in progress on `feat/49-postgres-full-text-retrieval`.
 
 ## Current Architecture Decisions
 
@@ -40,7 +41,7 @@ Last updated: 2026-05-24
 - Use deterministic local embeddings by default for current vector plumbing and tests. Real Gemini embeddings are opt-in with `GEMINI_EMBEDDINGS_ENABLED=true` and `gemini-embedding-2`.
 - Uploaded documents are indexed through `EmbeddingIndexService` after chunk persistence when `UPLOAD_INDEXING_ENABLED=true`; this is synchronous in the MVP and behind a `DocumentIndexer` boundary for later worker extraction.
 - Qdrant collection setup is idempotent when the stored vector dimension and distance metric match the active embedding and search contract. An incompatible configuration is rejected through a typed error and surfaced to upload callers as a non-sensitive conflict.
-- Hybrid retrieval uses deterministic Reciprocal Rank Fusion over dense Qdrant IDs and workspace-scoped keyword/exact matches, with trace rows persisted for inspection.
+- Hybrid retrieval uses deterministic Reciprocal Rank Fusion over dense Qdrant IDs and workspace-scoped PostgreSQL full-text candidates, with trace rows persisted for inspection. SQLite unit tests inject deterministic keyword scoring behind the same typed retriever boundary.
 - Cited answer generation validates generated citation IDs against retrieved evidence and refuses when evidence is missing or citations are fabricated.
 - Query routing now labels Fast Mode, Verified Mode, no-evidence, and freshness-required routes. Verified Mode includes deterministic contradiction detection for simple numeric claims.
 - Google Search grounding is feature-flagged and disabled by default. Freshness-required questions refuse clearly when grounding is disabled. When enabled, the backend chooses a free-tier-safe Search model instead of using Gemini 3.1 Flash-Lite for grounded prompts.
@@ -167,6 +168,10 @@ Last updated: 2026-05-24
 - Issue #46 focused GREEN checks: `uv run pytest tests/test_document_api.py tests/test_document_service_indexing.py -q` passed with 3 tests; focused ruff and Pyright passed; `RUN_INFRA_INTEGRATION=1 uv run pytest tests/test_qdrant_integration.py -q` passed with 4 tests covering repeated setup, dimension mismatch, distance mismatch, and repeated indexed ingestion.
 - Issue #46 live endpoint smoke: with Docker infrastructure, indexed upload enabled, deterministic local embeddings, the ignored local Gemini key, configured primary `gemini-3.1-flash-lite`, and lightweight fallback `gemini-2.5-flash-lite`, two public Markdown uploads reached `ready` through the existing `proofpilot_chunks` collection and a Verified Mode document-only query returned a cited response through `gemini-3.1-flash-lite`.
 - Issue #46 standard local gates after review hardening: backend format, lint, Pyright, and `uv run pytest -q` passed with 78 tests and 10 opt-in skips; Docker-backed PostgreSQL/Redis/Qdrant integration passed with 7 tests; frontend API drift check, lint, typecheck, `pnpm test` passed with 17 tests, and `pnpm build` passed with compiled-style verification; Docker Compose validation, git diff check, and secret-pattern scan passed.
+- Issue #49 RED checks: hybrid retrieval unit tests and the new PostgreSQL integration file failed to import the not-yet-created keyword retriever boundary.
+- Issue #49 focused GREEN checks: SQLite hybrid retrieval passed with an injected deterministic retriever (`3 passed`); Docker PostgreSQL retrieval passed stemming, workspace isolation, and GIN-index assertions (`2 passed`); migration `0002_chunk_fts_index` passed upgrade, downgrade to `0001_initial_schema`, and re-upgrade.
+- Issue #49 live endpoint smoke: with Docker infrastructure and the ignored local Gemini key, a public indexed document containing singular `decision` answered a plural `decisions` question with one valid citation through `gemini-3.1-flash-lite`; the persisted trace recorded the document as a `hybrid` candidate, proving the production keyword path participated.
+- Issue #49 standard local gates: backend format, lint, Pyright, and `uv run pytest -q` passed with 78 tests and 12 opt-in skips; Docker-backed PostgreSQL/Redis/Qdrant integration passed with 9 tests; frontend API drift check, lint, typecheck, `pnpm test` passed with 17 tests, and `pnpm build` passed with compiled-style verification; Docker Compose validation, git diff check, and secret-pattern scan passed.
 
 ## Unresolved Risks
 
@@ -174,7 +179,6 @@ Last updated: 2026-05-24
 - File Search pricing details must be rechecked before managed File Search integration code is added.
 - Playwright end-to-end automation is not yet wired into the repository quality gates; later UI verification has used the in-app browser plus component tests.
 - Local PostgreSQL uses host port `55432` to avoid a personal Postgres conflict on `5432`.
-- Issue #11 keyword retrieval currently uses deterministic exact term overlap over workspace chunks. PostgreSQL full-text optimization remains a later internal improvement behind the same service contract.
 - Provider-native Gemini token streaming remains a later enhancement. The current stream transport emits deltas from the finalized cited answer text.
 - Local `.env` may point `DATABASE_URL` at `localhost:5432`; Docker Compose PostgreSQL is exposed on `127.0.0.1:55432`, so local smoke commands should override `DATABASE_URL` or update the ignored `.env` value.
 - Port `8000` is currently owned by an unrelated local `esp32-ai-builder` backend; use `NEXT_PUBLIC_API_BASE_URL` and an alternate backend port for ProofPilot smoke tests when needed.
@@ -185,4 +189,4 @@ Last updated: 2026-05-24
 
 ## Next Issue
 
-- Merge Issue #46 after complete gates, then audit the highest-impact remaining MVP gap: provider-native streaming, PostgreSQL full-text retrieval, async ingestion worker extraction, or persisted fallback telemetry.
+- Merge Issue #49 after complete gates, then assess provider-native streaming, async ingestion worker extraction, and persisted fallback telemetry as remaining readiness work.
