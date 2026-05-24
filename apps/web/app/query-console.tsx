@@ -228,6 +228,7 @@ function RetrievalTrace({
       <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
         <TraceItem label="Route" value={answer.route} />
         <TraceItem label="Cache" value={answer.cache_status ?? "unknown"} />
+        <TraceItem label="Generation model" value={answer.generation_model_used ?? "none"} />
         <TraceItem label="Confidence" value={answer.confidence_label} />
         <TraceItem label="Freshness" value={answer.freshness_label} />
         <TraceItem label="Live grounding" value={answer.live_grounding_used ? "used" : "not used"} />

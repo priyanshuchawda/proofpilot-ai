@@ -14,6 +14,8 @@ Treat model IDs and grounding availability as configuration. Default search grou
 
 Use `gemini-3.1-flash-lite` for ordinary non-search generation when configured. Use `gemini-2.5-flash-lite` as the Search-grounding fallback because the 2026-05-24 official pricing review marks Gemini 3.1 Flash-Lite free-tier Search grounding as unavailable while Gemini 2.5 Flash-Lite remains free-tier-safe up to documented quota.
 
+For ordinary non-Search generation only, a temporary HTTP `503` from the configured primary model may be retried once with `GEMINI_LIGHTWEIGHT_MODEL`. HTTP `429` remains a quota refusal, and Google Search grounding continues to use its independently selected Search-safe route. The structured answer records the model that successfully generated the response.
+
 ## Consequences
 
 - The app can degrade gracefully under quota or unavailable routes.
@@ -22,3 +24,4 @@ Use `gemini-3.1-flash-lite` for ordinary non-search generation when configured. 
 - Search grounding remains disabled by default. If it is enabled and the freshness model is not free-tier-safe for Search, the backend chooses `GEMINI_SEARCH_GROUNDING_FALLBACK_MODEL`.
 - Successful Search-grounded responses require web-source grounding metadata, inline support mappings, and Google's Search Suggestions content; otherwise the application refuses instead of presenting an un-attributed current answer.
 - Retryable quota and overload failures are surfaced to users without selecting a paid model.
+- A temporary non-Search primary-model overload can recover through the configured free-tier lightweight model and remains visible in the retrieval trace.

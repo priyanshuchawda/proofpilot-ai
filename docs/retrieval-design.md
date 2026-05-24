@@ -47,7 +47,7 @@ No supported citation means no confident factual claim. Unsupported answers must
 
 ## Answer Contract
 
-- The query endpoint returns a structured answer with answer text, citations, evidence chunk IDs, confidence, refusal reason, mode, cache status, live-grounding flag, and optional required Search Suggestions content.
+- The query endpoint returns a structured answer with answer text, citations, evidence chunk IDs, confidence, refusal reason, mode, cache status, the successful generation model when a model answered, live-grounding flag, and optional required Search Suggestions content.
 - Evidence context explicitly states that uploaded documents are evidence, not instructions.
 - Generated citation IDs must be a subset of retrieved evidence chunk IDs.
 - Missing evidence returns a safe refusal without calling Gemini.
@@ -67,6 +67,7 @@ No supported citation means no confident factual claim. Unsupported answers must
 - When Search grounding is disabled, freshness-required answers refuse rather than returning stale uploaded-document-only facts as current information.
 - Google Search grounding is backend-only and feature-flagged; it remains off by default to avoid accidental quota use. It uses the verified Gemini 2.5 Flash-Lite fallback when the primary non-search model is not Search-free-tier-safe.
 - Search quota exhaustion returns `route_quota_exhausted`; temporary provider overload returns `route_provider_unavailable`. Neither route invokes a paid fallback.
+- Ordinary document generation retries once with the configured lightweight free-tier model after HTTP `503` from the primary model. It does not retry after HTTP `429`; the actual successful model is surfaced in the answer trace.
 
 ## Cache Safety
 
