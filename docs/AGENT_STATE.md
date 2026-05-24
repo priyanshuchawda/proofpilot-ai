@@ -20,6 +20,11 @@ Last updated: 2026-05-24
 - #27: Streamed query transport.
 - #29: Live health card and browser smoke readiness.
 - #31: Workspace and document management UI.
+- #41: Complete freshness web grounding path.
+
+## Current Issue
+
+- #41: Complete freshness web grounding path. Implementation and local verification are complete on `feat/41-freshness-web-grounding`; PR #42 is open pending final amended verification and merge.
 
 ## Current Architecture Decisions
 
@@ -44,6 +49,8 @@ Last updated: 2026-05-24
 - Dashboard workflow now owns selected workspace state and wires workspace/document management into the query console.
 - Query UI now includes a retrieval trace panel built from the final structured answer payload. It shows route, cache status, confidence, freshness, live grounding usage, query run ID, evidence chunk IDs, cited chunk IDs, and contradiction keys without exposing hidden chain-of-thought.
 - `GET /api/v1/query-runs/{query_run_id}` exposes persisted trace details for a single query run, including ordered retrieval candidates, cited evidence, generated answer, verification result, and latency metrics. The generated frontend client includes `getQueryRun`.
+- Opt-in Search grounding accepts current-information answers only when Gemini returns grounded web sources, support spans for inline `[web-n]` labels, and required Search Suggestions display metadata. Only sources referenced by support spans become displayed web evidence. The UI distinguishes web sources from uploaded documents and renders provider HTML in a sandboxed iframe.
+- Freshness routing is evaluated before empty document retrieval, allowing an explicitly enabled web-grounded answer without uploaded document evidence. HTTP `429` and `503` Gemini availability responses degrade to safe retry routes without paid fallback.
 - Final documentation must keep GitHub Actions deferred until explicit final CI enablement.
 
 ## Commands That Passed
@@ -137,6 +144,12 @@ Last updated: 2026-05-24
 - Issue #39 focused GREEN checks: `uv run pytest tests/test_document_service_indexing.py tests/test_document_api.py -q`; backend focused ruff format, ruff check, and pyright.
 - Issue #39 standard local gates: backend format, lint, pyright, pytest; `pnpm api:check`; frontend lint, typecheck, test, build; Docker Compose config.
 - Issue #39 Docker-backed upload indexing smoke: feature-branch API on `127.0.0.1:8012` with `UPLOAD_INDEXING_ENABLED=true`, `QDRANT_URL=http://127.0.0.1:6333`, and deterministic embeddings uploaded a Markdown document and created 1 `embedding_record` with model `deterministic-local`.
+- Issue #41 focused RED checks: backend failed on missing grounding-source metadata extraction, Search Suggestions handling, transient provider error normalization, and unreachable web-only freshness routing; frontend failed on missing live-web evidence and isolated Search Suggestions rendering.
+- Issue #41 focused GREEN checks: `uv run pytest tests/test_query_routing.py tests/test_query_service.py tests/test_gemini_provider.py tests/test_answer_service.py -q` passed with 32 tests; `pnpm api:check`; `pnpm test -- app/query-console.test.tsx` passed with 6 tests; `pnpm typecheck`.
+- Issue #41 pre-merge review fix: a RED provider test showed unreferenced Search chunks could be exposed as evidence; the implementation now retains only support-referenced web chunks and keeps inline labels aligned.
+- Issue #41 standard local gates after review fix: backend format, lint, pyright, and `uv run pytest -q` passed with 75 tests and 7 opt-in skips; frontend API drift check, lint, typecheck, `pnpm test` passed with 17 tests, and `pnpm build`; Docker Compose validation; Docker-backed PostgreSQL/Redis/Qdrant integration passed with 4 tests; secret-pattern scan matched only intentional redaction fixtures.
+- Issue #41 live API smoke: with the API on `127.0.0.1:8013`, explicit `gemini-3.1-flash-lite` primary configuration, Search via `gemini-2.5-flash-lite`, and an empty workspace, a current-information query returned `route_freshness_required`, `live_grounding_used=true`, 7 web citations, inline `[web-n]` labels, and Search Suggestions metadata.
+- Issue #41 live browser smoke: the UI on `127.0.0.1:3000` displayed primary/Search model routing and, during a later provider-overload response, rendered `route_provider_unavailable` with a safe retry message and persisted latency trace rather than fabricated evidence.
 
 ## Unresolved Risks
 
@@ -148,10 +161,12 @@ Last updated: 2026-05-24
 - Provider-native Gemini token streaming remains a later enhancement. The current stream transport emits deltas from the finalized cited answer text.
 - Local `.env` may point `DATABASE_URL` at `localhost:5432`; Docker Compose PostgreSQL is exposed on `127.0.0.1:55432`, so local smoke commands should override `DATABASE_URL` or update the ignored `.env` value.
 - Port `8000` is currently owned by an unrelated local `esp32-ai-builder` backend; use `NEXT_PUBLIC_API_BASE_URL` and an alternate backend port for ProofPilot smoke tests when needed.
-- Issue #17 adds the backend-only Google Search tool flag, but Search grounding remains disabled by default. Live grounding smoke is deferred until explicitly enabled because it spends free-tier grounding quota.
+- Search grounding remains disabled by default. A prior opt-in Search smoke succeeded; a subsequent opt-in call returned provider HTTP `503` under temporary high demand, which Issue #41 now maps to a safe retry route.
 - Issue #19 cache-hit latency metrics are not persisted because cache hits do not create a query run yet. Cache miss query runs persist retrieval, answer, and total latency metrics.
 - Next.js build no longer emits the parent-lockfile workspace-root warning after setting `turbopack.root`. It still emits an upstream `baseline-browser-mapping` staleness warning.
+- Browser smoke exposed that Tailwind utility classes are not currently emitted in the live app because the Tailwind v4 PostCSS integration is missing; global base colors load, but the intended polished layout styling does not. This requires a focused frontend fix before final demo readiness.
+- The ignored local `.env` used in one smoke run configured `gemini-2.5-flash-lite` for primary generation; Issue #41 live verification explicitly overrode non-secret model variables to exercise the documented `gemini-3.1-flash-lite` primary and `gemini-2.5-flash-lite` Search fallback.
 
 ## Next Issue
 
-- Finish Issue #39 PR after full local checks and Docker-backed upload indexing smoke pass.
+- Open and merge Issue #41 PR, then fix the missing Tailwind v4 processing path and add automatic `gemini-3.1-flash-lite` to `gemini-2.5-flash-lite` normal-generation fallback before remaining worker/streaming hardening.

@@ -144,3 +144,30 @@ async def test_query_service_adds_route_freshness_and_contradictions() -> None:
     assert answer.freshness_label == "freshness_required_grounding_disabled"
     assert len(answer.contradictions) == 1
     assert answer.contradictions[0].claim_key == "retention period"
+
+
+async def test_query_service_routes_current_web_question_without_document_evidence() -> None:
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    async with engine.begin() as connection:
+        await connection.run_sync(Base.metadata.create_all)
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+
+    async with session_factory() as session:
+        answer_service = FakeAnswerService()
+        service = QueryService(
+            session=session,
+            retrieval_service=FakeRetrievalService([]),
+            answer_service=answer_service,
+            grounding_enabled=True,
+        )
+
+        answer = await service.answer_workspace_query(
+            workspace_id="workspace-a",
+            query="What is the current Gemini release today?",
+            mode="verified",
+        )
+
+    await engine.dispose()
+
+    assert answer.route == "route_freshness_required"
+    assert answer.freshness_label == "freshness_required_grounding_enabled"

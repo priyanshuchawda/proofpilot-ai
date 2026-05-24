@@ -3,9 +3,10 @@
 import {
   createProofPilotClient,
   type AnswerResponse,
+  type Citation,
   type QueryRunTraceResponse,
 } from "@proofpilot/generated-api-client";
-import { FileText, Loader2, Send } from "lucide-react";
+import { FileText, Globe2, Loader2, Send } from "lucide-react";
 import { FormEvent, useState } from "react";
 
 type Mode = "fast" | "verified";
@@ -149,10 +150,14 @@ export function QueryConsole({ workspaceId }: { workspaceId?: string }) {
               {answer.citations.map((citation) => (
                 <span
                   className="inline-flex items-center gap-2 rounded-md border border-[#2b3344] bg-[#0c1320] px-2 py-1 text-sm text-[#c8d6ea]"
-                  key={citation.chunk_id}
+                  key={citationLabel(citation)}
                 >
-                  <FileText aria-hidden="true" size={15} />
-                  {citation.chunk_id}
+                  {citation.source_kind === "web" ? (
+                    <Globe2 aria-hidden="true" size={15} />
+                  ) : (
+                    <FileText aria-hidden="true" size={15} />
+                  )}
+                  {citationLabel(citation)}
                 </span>
               ))}
             </div>
@@ -170,19 +175,23 @@ export function QueryConsole({ workspaceId }: { workspaceId?: string }) {
 
             <div className="space-y-3">
               {answer.citations.map((citation) => (
-                <article
-                  className="rounded-md border border-[#2b3344] bg-[#0c1320] p-3"
-                  key={`${citation.chunk_id}-evidence`}
-                >
-                  <div className="flex flex-wrap items-center gap-2 text-sm text-[#b8c7dd]">
-                    <span className="font-semibold text-white">{citation.source_filename}</span>
-                    {citation.section_heading ? <span>{citation.section_heading}</span> : null}
-                    {citation.page_number ? <span>Page {citation.page_number}</span> : null}
-                  </div>
-                  <p className="mt-2 text-sm leading-6 text-[#c8d6ea]">{citation.evidence_text}</p>
-                </article>
+                <EvidenceCard citation={citation} key={`${citationLabel(citation)}-evidence`} />
               ))}
             </div>
+
+            {answer.search_suggestions_html ? (
+              <section aria-label="Google Search suggestions" className="space-y-2">
+                <h3 className="text-xs font-semibold uppercase text-[#8ea4c2]">
+                  Google Search suggestions
+                </h3>
+                <iframe
+                  className="h-14 w-full rounded-md border border-[#2b3344] bg-white"
+                  sandbox="allow-popups"
+                  srcDoc={answer.search_suggestions_html}
+                  title="Google Search suggestions"
+                />
+              </section>
+            ) : null}
           </div>
         ) : null}
       </div>
@@ -203,7 +212,7 @@ function RetrievalTrace({
     ? answer.evidence_chunk_ids.join(", ")
     : "none";
   const citedChunkIds = answer.citations.length
-    ? answer.citations.map((citation) => citation.chunk_id).join(", ")
+    ? answer.citations.map((citation) => citationLabel(citation)).join(", ")
     : "none";
   const contradictionKeys = (answer.contradictions ?? []).length
     ? (answer.contradictions ?? []).map((contradiction) => contradiction.claim_key).join(", ")
@@ -273,6 +282,51 @@ function RetrievalTrace({
       ) : null}
     </section>
   );
+}
+
+function EvidenceCard({ citation }: { citation: Citation }) {
+  if (citation.source_kind === "web") {
+    return (
+      <article className="rounded-md border border-[#2b3344] bg-[#0c1320] p-3">
+        <div className="flex flex-wrap items-center gap-2 text-sm text-[#b8c7dd]">
+          <span className="rounded-md border border-[#214a38] bg-[#10251d] px-2 py-1 text-xs font-semibold text-[#b6f3d2]">
+            Live web source
+          </span>
+          <span className="text-[#8ea4c2]">{citationLabel(citation)}</span>
+        </div>
+        {citation.uri ? (
+          <a
+            className="mt-2 inline-block break-words text-sm font-semibold text-[#67e8f9] underline-offset-4 hover:underline"
+            href={citation.uri}
+            rel="noreferrer"
+            target="_blank"
+          >
+            {citation.title ?? citation.source_filename ?? citation.uri}
+          </a>
+        ) : (
+          <p className="mt-2 text-sm font-semibold text-white">
+            {citation.title ?? citation.source_filename ?? "Web source"}
+          </p>
+        )}
+        <p className="mt-2 text-sm leading-6 text-[#c8d6ea]">{citation.evidence_text}</p>
+      </article>
+    );
+  }
+
+  return (
+    <article className="rounded-md border border-[#2b3344] bg-[#0c1320] p-3">
+      <div className="flex flex-wrap items-center gap-2 text-sm text-[#b8c7dd]">
+        <span className="font-semibold text-white">{citation.source_filename}</span>
+        {citation.section_heading ? <span>{citation.section_heading}</span> : null}
+        {citation.page_number ? <span>Page {citation.page_number}</span> : null}
+      </div>
+      <p className="mt-2 text-sm leading-6 text-[#c8d6ea]">{citation.evidence_text}</p>
+    </article>
+  );
+}
+
+function citationLabel(citation: Citation) {
+  return citation.citation_label ?? citation.chunk_id ?? "source";
 }
 
 function TraceItem({ label, value }: { label: string; value: string }) {

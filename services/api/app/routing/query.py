@@ -39,8 +39,6 @@ def determine_query_route(
     evidence_count: int,
     grounding_enabled: bool = False,
 ) -> QueryRouteDecision:
-    if evidence_count == 0:
-        return QueryRouteDecision(route="route_no_evidence", freshness_label="not_required")
     if requires_freshness(query):
         return QueryRouteDecision(
             route="route_freshness_required",
@@ -50,6 +48,8 @@ def determine_query_route(
                 else "freshness_required_grounding_disabled"
             ),
         )
+    if evidence_count == 0:
+        return QueryRouteDecision(route="route_no_evidence", freshness_label="not_required")
     if mode == QueryMode.FAST:
         return QueryRouteDecision(route="route_document_fast", freshness_label="not_required")
     return QueryRouteDecision(route="route_document_verified", freshness_label="not_required")

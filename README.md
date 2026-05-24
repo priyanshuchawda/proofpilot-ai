@@ -33,7 +33,7 @@ Gemini API access is backend-only. The frontend never receives `GEMINI_API_KEY`.
 - Safe refusal when evidence is missing or citations are fabricated.
 - Retrieval trace panel showing route, cache status, freshness, grounding, query run, retrieved candidates, evidence chunks, latency, and conflicts.
 - Fast Mode and Verified Mode routing.
-- Freshness-required detection with Search grounding disabled by default.
+- Freshness-required routing with opt-in, free-tier-safe Google Search grounding, inline web citations, and Search Suggestions display.
 - Deterministic contradiction detection for simple numeric claims.
 - Workspace/index-version scoped response caching.
 - Local latency metrics.
@@ -108,6 +108,8 @@ Use `.env.example` as the source of truth. Current development defaults use:
 - `UPLOAD_INDEXING_ENABLED=true`
 
 Search grounding remains disabled by default. When enabled, ProofPilot uses a free-tier-safe Search model fallback instead of sending grounded prompts through a model whose free-tier Search pricing is unavailable.
+
+For an explicit local current-information test, set `GEMINI_SEARCH_GROUNDING_ENABLED=true` in the ignored `.env` before starting the backend. The grounded response shows live-web source cards and Google's required Search Suggestions content; it never uses a paid fallback route.
 
 ## Free-Tier Safety
 
@@ -193,13 +195,13 @@ These are not human-reviewed answer-quality scores.
 4. Upload public demo documents.
 5. Ask a document question in Fast Mode.
 6. Switch to Verified Mode and inspect route, freshness, citations, evidence, and retrieval trace.
-7. Ask a no-evidence or freshness-required question and show refusal.
+7. Ask a no-evidence question and show refusal; with Search grounding explicitly enabled, ask a current-information question and inspect its live-web citations.
 8. Run the evaluation dashboard.
 9. Show local quality-gate results.
 
 ## Honest Limitations
 
-- Search grounding is disabled by default and not live-smoked automatically.
+- Search grounding is disabled by default and not live-smoked automatically; provider quota or temporary overload returns a retryable refusal rather than a paid fallback.
 - Provider-native token streaming is not yet implemented; the stream currently emits deltas from the finalized cited answer payload.
 - Deterministic local embeddings are the default; real Gemini embeddings are opt-in with `GEMINI_EMBEDDINGS_ENABLED=true`.
 - Keyword retrieval currently uses deterministic exact term overlap rather than optimized PostgreSQL full-text ranking.
@@ -211,6 +213,6 @@ These are not human-reviewed answer-quality scores.
 - Move upload-time indexing into a separate background worker.
 - Add provider-native Gemini token streaming behind the existing stream transport.
 - Add richer trace drawer and document management UI.
-- Add optional live Search grounding path when explicitly enabled.
+- Harden live Search evaluation cases and source-history inspection.
 - Add deeper evaluation datasets and human review workflow.
 - Enable GitHub Actions CI at final hardening.

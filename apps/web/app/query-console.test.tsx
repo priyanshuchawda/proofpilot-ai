@@ -279,6 +279,65 @@ test("loads persisted retrieval candidates for the trace panel", async () => {
   );
 });
 
+test("renders live web citations separately from document citations", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue({
+      body: queryStream({
+        query_run_id: "query-run-web",
+        answer_text: "Gemini models changed recently.",
+        citations: [
+          {
+            chunk_id: null,
+            citation_label: "web-1",
+            source_kind: "web",
+            source_filename: "Gemini API models",
+            page_number: null,
+            section_heading: null,
+            evidence_text: "Gemini API models include current Flash models.",
+            title: "Gemini API models",
+            uri: "https://ai.google.dev/gemini-api/docs/models",
+          },
+        ],
+        evidence_chunk_ids: [],
+        confidence_label: "medium",
+        refusal_reason: null,
+        live_grounding_used: true,
+        mode: "verified",
+        route: "route_freshness_required",
+        freshness_label: "freshness_required",
+        search_suggestions_html: "<div>Google Search suggestions</div>",
+        contradictions: [],
+        cache_status: "miss",
+      }),
+      ok: true,
+    }),
+  );
+
+  render(<QueryConsole workspaceId="workspace-web" />);
+
+  fireEvent.change(screen.getByLabelText("Question"), {
+    target: { value: "What changed recently?" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Verified Mode" }));
+  fireEvent.click(screen.getByRole("button", { name: "Ask" }));
+
+  await waitFor(() => {
+    expect(screen.getByText("Gemini models changed recently.")).toBeVisible();
+  });
+  expect(screen.getByText("Live web source")).toBeVisible();
+  expect(screen.getByRole("link", { name: "Gemini API models" })).toHaveAttribute(
+    "href",
+    "https://ai.google.dev/gemini-api/docs/models",
+  );
+  expect(screen.getAllByText("web-1")[0]).toBeVisible();
+  expect(screen.getByTitle("Google Search suggestions")).toHaveAttribute(
+    "srcdoc",
+    "<div>Google Search suggestions</div>",
+  );
+  expect(screen.getByTitle("Google Search suggestions")).toHaveAttribute("sandbox", "allow-popups");
+});
+
 function queryStream(finalPayload: object) {
   return new ReadableStream({
     start(controller) {

@@ -3,7 +3,13 @@ import json
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from app.ai.gemini import GeminiGenerateRequest, GeminiGenerateResponse, GeminiProvider
+from app.ai.gemini import (
+    GeminiGenerateRequest,
+    GeminiGenerateResponse,
+    GeminiGroundingSource,
+    GeminiProvider,
+    GeminiProviderUnavailableError,
+)
 from app.answers.context import build_evidence_context
 from app.db.base import Base
 from app.db.models import CitedEvidence, GeneratedAnswer, QueryRun
@@ -12,8 +18,15 @@ from app.services.answers import FRESHNESS_GROUNDING_DISABLED_REFUSAL, AnswerSer
 
 
 class FakeGeminiProvider(GeminiProvider):
-    def __init__(self, payload: dict[str, object]) -> None:
+    def __init__(
+        self,
+        payload: dict[str, object],
+        grounding_sources: list[GeminiGroundingSource] | None = None,
+        search_suggestions_html: str | None = None,
+    ) -> None:
         self.payload = payload
+        self.grounding_sources = grounding_sources or []
+        self.search_suggestions_html = search_suggestions_html
         self.requests: list[GeminiGenerateRequest] = []
 
     async def generate_text(self, request: GeminiGenerateRequest) -> GeminiGenerateResponse:
@@ -22,7 +35,17 @@ class FakeGeminiProvider(GeminiProvider):
             text=json.dumps(self.payload),
             model=request.model,
             provider="fake",
+            grounding_sources=self.grounding_sources,
+            search_suggestions_html=self.search_suggestions_html,
         )
+
+
+class FailingGeminiProvider(GeminiProvider):
+    def __init__(self, status_code: int) -> None:
+        self.status_code = status_code
+
+    async def generate_text(self, request: GeminiGenerateRequest) -> GeminiGenerateResponse:
+        raise GeminiProviderUnavailableError(status_code=self.status_code)
 
 
 def _evidence(chunk_id: str = "chunk-a") -> EvidenceChunk:
@@ -229,7 +252,7 @@ async def test_answer_service_refuses_freshness_required_when_grounding_disabled
     assert provider.requests == []
 
 
-async def test_answer_service_uses_grounding_model_and_search_tool_for_freshness_route() -> None:
+async def test_answer_service_refuses_freshness_route_when_search_returns_no_web_sources() -> None:
     engine = create_async_engine("sqlite+aiosqlite:///:memory:")
     async with engine.begin() as connection:
         await connection.run_sync(Base.metadata.create_all)
@@ -269,14 +292,362 @@ async def test_answer_service_uses_grounding_model_and_search_tool_for_freshness
             contradictions=[],
         )
 
+    await engine.dispose()
+
+    assert provider.requests[0].model == "gemini-2.5-flash-lite"
+    assert provider.requests[0].enable_google_search
+    assert not answer.live_grounding_used
+    assert answer.refusal_reason == "Live grounding did not return verifiable sources."
+
+
+async def test_answer_service_combines_explicit_document_and_live_web_citations() -> None:
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    async with engine.begin() as connection:
+        await connection.run_sync(Base.metadata.create_all)
+
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+    async with session_factory() as session:
+        query_run = QueryRun(
+            workspace_id="workspace-a",
+            conversation_id=None,
+            query_text="What is the latest policy status?",
+            route="route_freshness_required",
+            mode="verified",
+            cache_status="miss",
+        )
+        session.add(query_run)
+        await session.commit()
+
+        provider = FakeGeminiProvider(
+            {
+                "answer_text": (
+                    "The uploaded policy requires evidence. [chunk-a] "
+                    "Its current status is published online. [web-1]"
+                ),
+                "citation_chunk_ids": [],
+            },
+            grounding_sources=[
+                GeminiGroundingSource(
+                    citation_label="web-1",
+                    title="Status page",
+                    uri="https://status.example/policy",
+                    evidence_text="The policy is current.",
+                )
+            ],
+            search_suggestions_html="<div>Search suggestions</div>",
+        )
+        service = AnswerService(
+            session=session,
+            gemini_provider=provider,
+            generation_model="gemini-3.1-flash-lite",
+            grounding_model="gemini-2.5-flash-lite",
+        )
+
+        answer = await service.generate_answer(
+            retrieval=RetrievalResult(query_run_id=query_run.id, evidence=[_evidence()]),
+            query="What is the latest policy status?",
+            mode="verified",
+            route="route_freshness_required",
+            freshness_label="freshness_required",
+            contradictions=[],
+        )
+
+    await engine.dispose()
+
+    assert [citation.source_kind for citation in answer.citations] == ["document", "web"]
+    assert answer.evidence_chunk_ids == ["chunk-a"]
+
+
+async def test_freshness_route_uses_web_grounding_without_document_evidence() -> None:
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    async with engine.begin() as connection:
+        await connection.run_sync(Base.metadata.create_all)
+
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+    async with session_factory() as session:
+        query_run = QueryRun(
+            workspace_id="workspace-a",
+            conversation_id=None,
+            query_text="What is the latest Gemini model?",
+            route="route_freshness_required",
+            mode="verified",
+            cache_status="miss",
+        )
+        session.add(query_run)
+        await session.commit()
+
+        provider = FakeGeminiProvider(
+            {"answer_text": "Current Gemini model details. [web-1]", "citation_chunk_ids": []},
+            grounding_sources=[
+                GeminiGroundingSource(
+                    citation_label="web-1",
+                    title="Gemini API models",
+                    uri="https://ai.google.dev/gemini-api/docs/models",
+                    evidence_text="Gemini API models include current Flash models.",
+                )
+            ],
+            search_suggestions_html="<div>Search suggestions</div>",
+        )
+        service = AnswerService(
+            session=session,
+            gemini_provider=provider,
+            generation_model="gemini-3.1-flash-lite",
+            grounding_model="gemini-2.5-flash-lite",
+        )
+
+        answer = await service.generate_answer(
+            retrieval=RetrievalResult(query_run_id=query_run.id, evidence=[]),
+            query="What is the latest Gemini model?",
+            mode="verified",
+            route="route_freshness_required",
+            freshness_label="freshness_required",
+            contradictions=[],
+        )
+
+        cited = (await session.execute(select(CitedEvidence))).scalars().all()
         generated = (await session.execute(select(GeneratedAnswer))).scalars().all()
 
     await engine.dispose()
 
     assert provider.requests[0].model == "gemini-2.5-flash-lite"
     assert provider.requests[0].enable_google_search
+    assert answer.answer_text == "Current Gemini model details. [web-1]"
+    assert answer.refusal_reason is None
     assert answer.live_grounding_used
+    assert answer.citations[0].source_kind == "web"
+    assert answer.citations[0].chunk_id is None
+    assert answer.citations[0].citation_label == "web-1"
+    assert answer.citations[0].uri == "https://ai.google.dev/gemini-api/docs/models"
+    assert answer.search_suggestions_html == "<div>Search suggestions</div>"
+    assert answer.evidence_chunk_ids == []
+    assert cited[0].source_kind == "web"
+    assert cited[0].chunk_id is None
     assert generated[0].live_grounding_used
+
+
+async def test_answer_service_refuses_live_grounding_without_source_metadata() -> None:
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    async with engine.begin() as connection:
+        await connection.run_sync(Base.metadata.create_all)
+
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+    async with session_factory() as session:
+        query_run = QueryRun(
+            workspace_id="workspace-a",
+            conversation_id=None,
+            query_text="What happened today?",
+            route="route_freshness_required",
+            mode="verified",
+            cache_status="miss",
+        )
+        session.add(query_run)
+        await session.commit()
+
+        service = AnswerService(
+            session=session,
+            gemini_provider=FakeGeminiProvider(
+                {"answer_text": "unsupported", "citation_chunk_ids": []}
+            ),
+            generation_model="gemini-3.1-flash-lite",
+            grounding_model="gemini-2.5-flash-lite",
+        )
+
+        answer = await service.generate_answer(
+            retrieval=RetrievalResult(query_run_id=query_run.id, evidence=[]),
+            query="What happened today?",
+            mode="verified",
+            route="route_freshness_required",
+            freshness_label="freshness_required",
+            contradictions=[],
+        )
+
+    await engine.dispose()
+
+    assert answer.answer_text == ""
+    assert answer.confidence_label == "low"
+    assert answer.refusal_reason == "Live grounding did not return verifiable sources."
+
+
+async def test_answer_service_refuses_web_sources_not_cited_in_answer_text() -> None:
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    async with engine.begin() as connection:
+        await connection.run_sync(Base.metadata.create_all)
+
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+    async with session_factory() as session:
+        query_run = QueryRun(
+            workspace_id="workspace-a",
+            conversation_id=None,
+            query_text="What happened today?",
+            route="route_freshness_required",
+            mode="verified",
+            cache_status="miss",
+        )
+        session.add(query_run)
+        await session.commit()
+
+        service = AnswerService(
+            session=session,
+            gemini_provider=FakeGeminiProvider(
+                {"answer_text": "An unsupported current answer.", "citation_chunk_ids": []},
+                grounding_sources=[
+                    GeminiGroundingSource(
+                        citation_label="web-1",
+                        title="News",
+                        uri="https://example.test/news",
+                        evidence_text="Supported text.",
+                    )
+                ],
+                search_suggestions_html="<div>Search suggestions</div>",
+            ),
+            generation_model="gemini-3.1-flash-lite",
+            grounding_model="gemini-2.5-flash-lite",
+        )
+
+        answer = await service.generate_answer(
+            retrieval=RetrievalResult(query_run_id=query_run.id, evidence=[]),
+            query="What happened today?",
+            mode="verified",
+            route="route_freshness_required",
+            freshness_label="freshness_required",
+            contradictions=[],
+        )
+
+    await engine.dispose()
+
+    assert answer.answer_text == ""
+    assert answer.refusal_reason == "Live grounding did not return inline cited evidence."
+
+
+async def test_answer_service_refuses_grounding_without_required_search_suggestions() -> None:
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    async with engine.begin() as connection:
+        await connection.run_sync(Base.metadata.create_all)
+
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+    async with session_factory() as session:
+        query_run = QueryRun(
+            workspace_id="workspace-a",
+            conversation_id=None,
+            query_text="What changed today?",
+            route="route_freshness_required",
+            mode="verified",
+            cache_status="miss",
+        )
+        session.add(query_run)
+        await session.commit()
+
+        service = AnswerService(
+            session=session,
+            gemini_provider=FakeGeminiProvider(
+                {"answer_text": "A current answer. [web-1]", "citation_chunk_ids": []},
+                grounding_sources=[
+                    GeminiGroundingSource(
+                        citation_label="web-1",
+                        title="News",
+                        uri="https://example.test/news",
+                        evidence_text="Supported text.",
+                    )
+                ],
+            ),
+            generation_model="gemini-3.1-flash-lite",
+            grounding_model="gemini-2.5-flash-lite",
+        )
+
+        answer = await service.generate_answer(
+            retrieval=RetrievalResult(query_run_id=query_run.id, evidence=[]),
+            query="What changed today?",
+            mode="verified",
+            route="route_freshness_required",
+            freshness_label="freshness_required",
+            contradictions=[],
+        )
+
+    await engine.dispose()
+
+    assert answer.answer_text == ""
+    assert answer.refusal_reason == "Live grounding did not return required Search Suggestions."
+
+
+async def test_answer_service_returns_quota_route_for_gemini_rate_limit() -> None:
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    async with engine.begin() as connection:
+        await connection.run_sync(Base.metadata.create_all)
+
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+    async with session_factory() as session:
+        query_run = QueryRun(
+            workspace_id="workspace-a",
+            conversation_id=None,
+            query_text="What changed today?",
+            route="route_freshness_required",
+            mode="verified",
+            cache_status="miss",
+        )
+        session.add(query_run)
+        await session.commit()
+
+        service = AnswerService(
+            session=session,
+            gemini_provider=FailingGeminiProvider(status_code=429),
+            generation_model="gemini-3.1-flash-lite",
+            grounding_model="gemini-2.5-flash-lite",
+        )
+        answer = await service.generate_answer(
+            retrieval=RetrievalResult(query_run_id=query_run.id, evidence=[_evidence()]),
+            query="What changed today?",
+            mode="verified",
+            route="route_freshness_required",
+            freshness_label="freshness_required",
+            contradictions=[],
+        )
+        stored_run = await session.get(QueryRun, query_run.id)
+
+    await engine.dispose()
+
+    assert answer.route == "route_quota_exhausted"
+    assert answer.refusal_reason == "Gemini free-tier quota is unavailable. Retry later."
+    assert stored_run is not None
+    assert stored_run.route == "route_quota_exhausted"
+
+
+async def test_answer_service_returns_unavailable_route_for_gemini_overload() -> None:
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    async with engine.begin() as connection:
+        await connection.run_sync(Base.metadata.create_all)
+
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+    async with session_factory() as session:
+        query_run = QueryRun(
+            workspace_id="workspace-a",
+            conversation_id=None,
+            query_text="What changed today?",
+            route="route_freshness_required",
+            mode="verified",
+            cache_status="miss",
+        )
+        session.add(query_run)
+        await session.commit()
+
+        service = AnswerService(
+            session=session,
+            gemini_provider=FailingGeminiProvider(status_code=503),
+            generation_model="gemini-3.1-flash-lite",
+            grounding_model="gemini-2.5-flash-lite",
+        )
+        answer = await service.generate_answer(
+            retrieval=RetrievalResult(query_run_id=query_run.id, evidence=[]),
+            query="What changed today?",
+            mode="verified",
+            route="route_freshness_required",
+            freshness_label="freshness_required",
+            contradictions=[],
+        )
+
+    await engine.dispose()
+
+    assert answer.route == "route_provider_unavailable"
+    assert answer.refusal_reason == "Gemini grounding is temporarily unavailable. Retry later."
 
 
 def test_evidence_context_treats_document_text_as_untrusted_evidence() -> None:

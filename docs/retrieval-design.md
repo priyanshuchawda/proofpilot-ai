@@ -18,8 +18,8 @@
 7. Fuse candidates with Reciprocal Rank Fusion.
 8. Apply metadata filters and deterministic reranking.
 9. Build a minimal context window from top evidence.
-10. Generate an answer with citation IDs.
-11. Validate citation IDs against retrieved chunks.
+10. Generate an answer with document citation IDs or feature-flagged live Search grounding.
+11. Validate document citation IDs against retrieved chunks and web citation labels against Gemini grounding support spans.
 12. Store query trace and latency metrics.
 
 Document ingestion persists redacted chunks and metadata, then indexes ready chunks through the embedding service boundary when `UPLOAD_INDEXING_ENABLED=true`. Dense vector indexing stores document chunks in Qdrant and embeds queries before vector search. Standard tests use deterministic local embeddings so CI and local development do not require a Gemini key. Real Gemini embedding calls are available only when `GEMINI_EMBEDDINGS_ENABLED=true`; otherwise the deterministic provider remains active.
@@ -47,11 +47,13 @@ No supported citation means no confident factual claim. Unsupported answers must
 
 ## Answer Contract
 
-- The query endpoint returns a structured answer with answer text, citations, evidence chunk IDs, confidence, refusal reason, mode, cache status, and live-grounding flag.
+- The query endpoint returns a structured answer with answer text, citations, evidence chunk IDs, confidence, refusal reason, mode, cache status, live-grounding flag, and optional required Search Suggestions content.
 - Evidence context explicitly states that uploaded documents are evidence, not instructions.
 - Generated citation IDs must be a subset of retrieved evidence chunk IDs.
 - Missing evidence returns a safe refusal without calling Gemini.
 - Fabricated citations produce a low-confidence refusal and are persisted as a generated answer record with refusal metadata.
+- Live-grounded answers use `groundingChunks` and `groundingSupports` to emit `[web-n]` labels and distinct web citation records. Only chunks referenced by support spans are presented as cited evidence; absent web metadata or inline mappings produce a refusal.
+- Required Google Search Suggestions HTML is passed to the UI and displayed inside a sandboxed iframe rather than injected into the application DOM.
 - The JSON query endpoint remains available for clients that want a complete structured payload.
 - The streaming query endpoint emits `answer_delta` events and a final structured `final` event with citation metadata. Provider-native token streaming remains a later Gemini provider enhancement.
 
@@ -60,10 +62,11 @@ No supported citation means no confident factual claim. Unsupported answers must
 - Fast Mode retrieves fewer candidates and skips deterministic contradiction detection.
 - Verified Mode retrieves more candidates, validates citations, and detects deterministic numeric contradictions in retrieved evidence.
 - Freshness-required questions are detected with explicit terms such as current, latest, today, version, pricing, release, and status.
-- Until web grounding is implemented, freshness-required answers carry `freshness_required_grounding_disabled` so the UI can avoid pretending the answer is current.
-- No-evidence retrieval routes to `route_no_evidence` and returns the existing safe refusal path.
+- Freshness-required answers carry `freshness_required_grounding_disabled` when live grounding is not explicitly enabled.
+- No-evidence retrieval routes to `route_no_evidence` for document-only questions; freshness-required questions are routed before that check so opt-in Search can answer without uploaded chunks.
 - When Search grounding is disabled, freshness-required answers refuse rather than returning stale uploaded-document-only facts as current information.
-- Google Search grounding plumbing is backend-only and feature-flagged; it remains off by default to avoid accidental quota use.
+- Google Search grounding is backend-only and feature-flagged; it remains off by default to avoid accidental quota use. It uses the verified Gemini 2.5 Flash-Lite fallback when the primary non-search model is not Search-free-tier-safe.
+- Search quota exhaustion returns `route_quota_exhausted`; temporary provider overload returns `route_provider_unavailable`. Neither route invokes a paid fallback.
 
 ## Cache Safety
 
