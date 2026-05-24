@@ -22,10 +22,11 @@ Last updated: 2026-05-24
 - #31: Workspace and document management UI.
 - #41: Complete freshness web grounding path.
 - #43: Restore Tailwind utility styling and visual smoke coverage.
+- #45: Add observable free-tier fallback for document answer generation.
 
 ## Current Issue
 
-- #45: Add observable free-tier fallback for document answer generation. Implementation is in progress on `feat/45-generation-fallback`.
+- #46: Fix idempotent Qdrant collection reuse during indexed upload. Implementation is in progress on `fix/46-qdrant-collection-reuse`.
 
 ## Current Architecture Decisions
 
@@ -38,6 +39,7 @@ Last updated: 2026-05-24
 - Keep real Gemini smoke tests manual only behind `RUN_GEMINI_SMOKE=1`.
 - Use deterministic local embeddings by default for current vector plumbing and tests. Real Gemini embeddings are opt-in with `GEMINI_EMBEDDINGS_ENABLED=true` and `gemini-embedding-2`.
 - Uploaded documents are indexed through `EmbeddingIndexService` after chunk persistence when `UPLOAD_INDEXING_ENABLED=true`; this is synchronous in the MVP and behind a `DocumentIndexer` boundary for later worker extraction.
+- Qdrant collection setup is idempotent when the stored vector dimension and distance metric match the active embedding and search contract. An incompatible configuration is rejected through a typed error and surfaced to upload callers as a non-sensitive conflict.
 - Hybrid retrieval uses deterministic Reciprocal Rank Fusion over dense Qdrant IDs and workspace-scoped keyword/exact matches, with trace rows persisted for inspection.
 - Cited answer generation validates generated citation IDs against retrieved evidence and refuses when evidence is missing or citations are fabricated.
 - Query routing now labels Fast Mode, Verified Mode, no-evidence, and freshness-required routes. Verified Mode includes deterministic contradiction detection for simple numeric claims.
@@ -161,12 +163,16 @@ Last updated: 2026-05-24
 - Issue #45 focused GREEN checks: `uv run pytest tests/test_answer_service.py -q` passed with 15 tests; targeted backend Pyright passed; `pnpm --filter @proofpilot/web test -- app/query-console.test.tsx` passed with 6 tests; generated client drift check passed after OpenAPI regeneration.
 - Issue #45 live provider-boundary smoke: using the ignored local key and a public in-memory evidence chunk, ordinary answer generation succeeded through configured primary `gemini-3.1-flash-lite`, returned one valid citation, and exposed `generation_model_used=gemini-3.1-flash-lite`; automatic fallback remains deterministically covered because a live transient overload cannot be forced safely.
 - Issue #45 standard local gates: frontend API drift check, lint, typecheck, `pnpm test` passed with 17 tests, and `pnpm build` passed with its compiled-style assertion; backend format, lint, pyright, and `uv run pytest -q` passed with 77 tests and 7 opt-in skips; Docker Compose validation, git diff check, and secret-pattern scan passed.
+- Issue #46 RED checks: Docker-backed repeated `ensure_collection` reproduced Qdrant HTTP `409 Conflict`; the document API mismatch regression returned HTTP `500` rather than a controlled conflict before endpoint handling was added.
+- Issue #46 focused GREEN checks: `uv run pytest tests/test_document_api.py tests/test_document_service_indexing.py -q` passed with 3 tests; focused ruff and Pyright passed; `RUN_INFRA_INTEGRATION=1 uv run pytest tests/test_qdrant_integration.py -q` passed with 4 tests covering repeated setup, dimension mismatch, distance mismatch, and repeated indexed ingestion.
+- Issue #46 live endpoint smoke: with Docker infrastructure, indexed upload enabled, deterministic local embeddings, the ignored local Gemini key, configured primary `gemini-3.1-flash-lite`, and lightweight fallback `gemini-2.5-flash-lite`, two public Markdown uploads reached `ready` through the existing `proofpilot_chunks` collection and a Verified Mode document-only query returned a cited response through `gemini-3.1-flash-lite`.
+- Issue #46 standard local gates after review hardening: backend format, lint, Pyright, and `uv run pytest -q` passed with 78 tests and 10 opt-in skips; Docker-backed PostgreSQL/Redis/Qdrant integration passed with 7 tests; frontend API drift check, lint, typecheck, `pnpm test` passed with 17 tests, and `pnpm build` passed with compiled-style verification; Docker Compose validation, git diff check, and secret-pattern scan passed.
 
 ## Unresolved Risks
 
 - GitHub Actions are intentionally disabled for now to avoid spending Actions minutes before final hardening.
 - File Search pricing details must be rechecked before managed File Search integration code is added.
-- In-app browser automation was unavailable in this session; Playwright was also not installed in the shared Node runtime. Issue 1 used HTTP smoke testing instead.
+- Playwright end-to-end automation is not yet wired into the repository quality gates; later UI verification has used the in-app browser plus component tests.
 - Local PostgreSQL uses host port `55432` to avoid a personal Postgres conflict on `5432`.
 - Issue #11 keyword retrieval currently uses deterministic exact term overlap over workspace chunks. PostgreSQL full-text optimization remains a later internal improvement behind the same service contract.
 - Provider-native Gemini token streaming remains a later enhancement. The current stream transport emits deltas from the finalized cited answer text.
@@ -176,8 +182,7 @@ Last updated: 2026-05-24
 - Issue #19 cache-hit latency metrics are not persisted because cache hits do not create a query run yet. Cache miss query runs persist retrieval, answer, and total latency metrics.
 - Next.js build no longer emits the parent-lockfile workspace-root warning after setting `turbopack.root`. It still emits an upstream `baseline-browser-mapping` staleness warning.
 - The ignored local `.env` used in one smoke run configured `gemini-2.5-flash-lite` for primary generation; Issue #41 live verification explicitly overrode non-secret model variables to exercise the documented `gemini-3.1-flash-lite` primary and `gemini-2.5-flash-lite` Search fallback.
-- Live indexed-upload smoke found that `QdrantVectorStore.ensure_collection` returns HTTP `409 Conflict` when `proofpilot_chunks` already exists, causing an upload HTTP 500 with indexing enabled. This is tracked in [Issue #46](https://github.com/priyanshuchawda/proofpilot-ai/issues/46) and must be fixed before final end-to-end readiness.
 
 ## Next Issue
 
-- Merge Issue #45 after complete gates, then fix Issue #46 Qdrant collection reuse before assessing persisted fallback telemetry and provider-native streaming.
+- Merge Issue #46 after complete gates, then audit the highest-impact remaining MVP gap: provider-native streaming, PostgreSQL full-text retrieval, async ingestion worker extraction, or persisted fallback telemetry.
