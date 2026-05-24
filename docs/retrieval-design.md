@@ -29,6 +29,7 @@ Document ingestion persists redacted chunks and metadata, then indexes ready chu
 - `EmbeddingProvider` is a backend-only protocol. The current deterministic provider is used for tests and local retrieval plumbing.
 - `EmbeddingIndexService.index_document` batches chunk text, stores `embedding_record` metadata, and upserts Qdrant points keyed to chunk IDs.
 - Existing records for the same chunk, content hash, and embedding model are skipped so re-indexing is idempotent.
+- Qdrant collection initialization reuses an existing collection only when its vector dimension and cosine distance match the configured embedding output and search contract; an incompatible configuration produces a controlled upload conflict.
 - `EmbeddingIndexService.search_query` embeds the query and searches Qdrant through the `VectorStore` protocol.
 - The current MVP calls indexing synchronously after chunk persistence; the `DocumentIndexer` service boundary preserves a later background worker handoff.
 - Qdrant integration is opt-in for tests with `RUN_INFRA_INTEGRATION=1`.

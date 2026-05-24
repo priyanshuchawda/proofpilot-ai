@@ -12,7 +12,7 @@ from app.db.session import get_db_session
 from app.ingestion.uploads import UnsupportedUploadError, UploadTooLargeError
 from app.services.documents import DocumentService
 from app.services.embedding_index import EmbeddingIndexService
-from app.vector.qdrant import QdrantVectorStore
+from app.vector.qdrant import QdrantCollectionConfigurationError, QdrantVectorStore
 
 router = APIRouter(tags=["documents"])
 
@@ -92,6 +92,11 @@ async def upload_document(
     except UnsupportedUploadError as exc:
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail=str(exc)
+        ) from exc
+    except QdrantCollectionConfigurationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Document cannot be indexed with the configured vector collection.",
         ) from exc
 
     return await to_document_response(document, service)
