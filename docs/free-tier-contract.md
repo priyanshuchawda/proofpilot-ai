@@ -52,6 +52,7 @@ All model IDs are configuration values, not hard-coded architecture assumptions.
 - Real Gemini smoke tests are manual only and guarded by `RUN_GEMINI_SMOKE=1`.
 - Real Gemini embedding calls are disabled by default for deterministic local testing. When `GEMINI_EMBEDDINGS_ENABLED=true` and `GEMINI_API_KEY` is present, the backend uses the official `google-genai` SDK with `gemini-embedding-2`; otherwise it falls back to deterministic local embeddings without exposing secrets.
 - Google Search grounding remains disabled by default even though Gemini 2.5 Flash-Lite is documented as free-tier-safe up to quota. Freshness-required questions refuse clearly unless `GEMINI_SEARCH_GROUNDING_ENABLED=true` is deliberately set.
+- When Search grounding is deliberately enabled, accepted responses must carry `groundingChunks`, `groundingSupports`, and `searchEntryPoint.renderedContent`. ProofPilot maps these to inline `[web-n]` labels, distinct live-web sources, and an isolated Search Suggestions display; missing required metadata results in refusal.
 - Provider-managed File Search remains disabled. It can be investigated later behind a disabled-by-default adapter after another pricing and privacy review.
 
 ## Known Quotas And Degradation
@@ -60,6 +61,7 @@ All model IDs are configuration values, not hard-coded architecture assumptions.
 - Search grounding for Gemini 2.5 Flash and Flash-Lite is documented as free up to 500 requests per day shared across the Flash and Flash-Lite RPD. Paid tiers have higher free shared limits and then bill per grounded prompt.
 - Gemini 3 Search grounding has separate free prompt language for supported models, but the Gemini 3.1 Flash-Lite pricing row marks free-tier Search grounding as unavailable. The app must not use Gemini 3.1 Flash-Lite for Search unless official pricing changes and this document is updated.
 - If quota is exhausted, the backend returns `route_quota_exhausted`, preserves retrieval evidence, and allows retry later.
+- If Gemini returns transient service overload such as HTTP `503`, the backend returns `route_provider_unavailable` and allows retry without switching to a paid or unverified model.
 
 ## Live Smoke Result
 
@@ -67,6 +69,8 @@ All model IDs are configuration values, not hard-coded architecture assumptions.
 - 2026-05-24: Provider fallback tests verify that `gemini-3.1-flash-lite` is not treated as free-tier-safe for Search and falls back to `gemini-2.5-flash-lite`.
 - 2026-05-24: Manual opt-in embedding smoke passed with `RUN_GEMINI_EMBEDDING_SMOKE=1` using `gemini-embedding-2`.
 - 2026-05-24: Manual opt-in Search grounding smoke passed with `RUN_GEMINI_SEARCH_SMOKE=1` using the configured free-tier-safe fallback model.
+- 2026-05-24: A later opt-in Search retry returned HTTP `503 UNAVAILABLE` due to temporary model demand; this is a provider-availability condition rather than an API-key authentication failure and is covered by the graceful-degradation path.
+- 2026-05-24: Issue #41 live endpoint smoke with `gemini-3.1-flash-lite` configured for ordinary generation and `gemini-2.5-flash-lite` selected for Search returned a grounded, web-only freshness answer with 7 live sources, inline source labels, and required Search Suggestions metadata.
 - Standard tests remain mocked or skipped and do not require `GEMINI_API_KEY`.
 
 ## Privacy Contract

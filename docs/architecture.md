@@ -18,7 +18,7 @@ ProofPilot AI is a monorepo with a TypeScript frontend, Python AI backend, and l
 3. Retrieval combines dense Qdrant candidates and PostgreSQL keyword candidates.
 4. Deterministic fusion and optional local reranking select evidence.
 5. Gemini generation receives only redacted, minimal context from the backend.
-6. Citation validation rejects or downgrades unsupported claims.
+6. Citation validation rejects or downgrades unsupported document claims and un-attributed live-web answers.
 7. Query traces, latency metrics, and evidence mappings are stored for inspection.
 
 ## Boundaries
@@ -47,11 +47,11 @@ Issue #11 adds a retrieval service that embeds the query, requests dense Qdrant 
 
 ## Cited Answers
 
-Issue #13 adds `POST /api/v1/workspaces/{workspace_id}/query`, which orchestrates retrieval and answer generation through dependency-injected services. The backend builds an untrusted evidence context, asks Gemini for a strict cited JSON answer, validates citation chunk IDs against retrieved evidence, persists generated answers and cited evidence, and refuses when evidence is missing or citations are fabricated. Issue #27 adds `POST /api/v1/workspaces/{workspace_id}/query/stream`, which emits `text/event-stream` answer deltas followed by a final structured answer payload. Standard tests mock Gemini. Issue #37 allows `gemini-3.1-flash-lite` for non-search generation while selecting a configured Gemini 2.5 fallback for free-tier-safe Search grounding.
+Issue #13 adds `POST /api/v1/workspaces/{workspace_id}/query`, which orchestrates retrieval and answer generation through dependency-injected services. The backend builds an untrusted evidence context, asks Gemini for a strict cited JSON answer, validates citation chunk IDs against retrieved evidence, persists generated answers and cited evidence, and refuses when evidence is missing or citations are fabricated. Issue #27 adds `POST /api/v1/workspaces/{workspace_id}/query/stream`, which emits `text/event-stream` answer deltas followed by a final structured answer payload. Standard tests mock Gemini. Issue #37 allows `gemini-3.1-flash-lite` for non-search generation while selecting a configured Gemini 2.5 fallback for free-tier-safe Search grounding. Issue #41 consumes Gemini Search grounding metadata, inserts inline `[web-n]` markers from supported text spans, returns only web sources referenced by those support spans distinctly from document chunks, and exposes required Search Suggestions content through an isolated UI iframe.
 
 ## Query Routing
 
-Issue #15 adds deterministic routing metadata for Fast Mode, Verified Mode, no-evidence results, and freshness-required questions. Verified Mode detects simple numeric contradictions across retrieved evidence and returns contradiction details in the answer contract. Freshness-required questions are labeled clearly while Google Search grounding remains disabled until the dedicated grounding milestone.
+Issue #15 adds deterministic routing metadata for Fast Mode, Verified Mode, no-evidence results, and freshness-required questions. Verified Mode detects simple numeric contradictions across retrieved evidence and returns contradiction details in the answer contract. Issue #41 makes freshness routing precede empty-document refusal, allowing a current-information question with no uploaded source to use Google Search only when the feature flag is explicitly enabled. Search responses without sources, inline mappings, or required Search Suggestions are refused. Gemini quota exhaustion and temporary overload produce safe retryable routes without paid fallback.
 
 ## Caching And Metrics
 

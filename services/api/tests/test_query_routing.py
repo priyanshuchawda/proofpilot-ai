@@ -45,3 +45,27 @@ def test_query_route_marks_freshness_required_without_grounding() -> None:
 
     assert decision.route == "route_freshness_required"
     assert decision.freshness_label == "freshness_required_grounding_disabled"
+
+
+def test_query_route_uses_enabled_grounding_for_freshness_without_document_evidence() -> None:
+    decision = determine_query_route(
+        query="What is the latest release today?",
+        mode=QueryMode.VERIFIED,
+        evidence_count=0,
+        grounding_enabled=True,
+    )
+
+    assert decision.route == "route_freshness_required"
+    assert decision.freshness_label == "freshness_required_grounding_enabled"
+
+
+def test_query_route_explains_disabled_grounding_for_freshness_without_document_evidence() -> None:
+    decision = determine_query_route(
+        query="What is the latest release today?",
+        mode=QueryMode.VERIFIED,
+        evidence_count=0,
+        grounding_enabled=False,
+    )
+
+    assert decision.route == "route_freshness_required"
+    assert decision.freshness_label == "freshness_required_grounding_disabled"

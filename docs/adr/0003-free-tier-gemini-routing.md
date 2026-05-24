@@ -20,3 +20,5 @@ Use `gemini-3.1-flash-lite` for ordinary non-search generation when configured. 
 - Documentation must record verified pricing and capability decisions.
 - Real Gemini smoke tests remain opt-in only.
 - Search grounding remains disabled by default. If it is enabled and the freshness model is not free-tier-safe for Search, the backend chooses `GEMINI_SEARCH_GROUNDING_FALLBACK_MODEL`.
+- Successful Search-grounded responses require web-source grounding metadata, inline support mappings, and Google's Search Suggestions content; otherwise the application refuses instead of presenting an un-attributed current answer.
+- Retryable quota and overload failures are surfaced to users without selecting a paid model.

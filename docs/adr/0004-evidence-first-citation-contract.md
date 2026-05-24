@@ -16,4 +16,6 @@ Every answer must carry structured citation metadata. Important factual claims m
 
 - Generation output requires schema validation.
 - Citation IDs must be checked against actual retrieved evidence.
+- Live web citations must be mapped from Gemini grounding support metadata and shown with distinct `web-n` labels.
+- Search-grounded responses are accepted only when required Search Suggestions display metadata is present.
 - The UI can show evidence trails and confidence labels honestly.
