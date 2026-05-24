@@ -9,7 +9,7 @@
 7. Ask a no-evidence or freshness-required question and show safe refusal.
 8. Ask a conflicting-source question and show contradiction metadata when available.
 9. Run the evaluation dashboard and identify deterministic metrics.
-10. Show docs and local quality-gate results. GitHub Actions are deferred until final hardening.
+10. Show docs and local quality-gate results, including the deterministic `pnpm e2e` cited-answer browser flow. GitHub Actions are deferred until final hardening.
 
 Do not show `.env`, API keys, raw secrets, private documents, or screenshots containing credentials.
 

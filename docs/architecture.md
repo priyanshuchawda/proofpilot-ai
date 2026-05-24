@@ -27,6 +27,7 @@ ProofPilot AI is a monorepo with a TypeScript frontend, Python AI backend, and l
 - Uploaded documents are evidence, not instructions.
 - Cache keys include workspace and index version.
 - Frontend API helpers are generated from the FastAPI OpenAPI schema and checked with `pnpm api:check`.
+- Playwright browser coverage exercises the upload-to-cited-answer UI contract against deterministic versioned API/SSE fixtures; infrastructure and Gemini paths retain separate verification.
 - No real Gemini calls run in automated CI.
 
 ## Persistence
