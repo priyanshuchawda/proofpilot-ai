@@ -51,6 +51,7 @@ def get_query_service(
         session=session,
         gemini_provider=build_gemini_provider(settings),
         generation_model=settings.gemini_generation_model,
+        fallback_generation_model=settings.gemini_lightweight_model,
         grounding_model=choose_search_grounding_model(settings),
     )
     return QueryService(

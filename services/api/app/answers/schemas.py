@@ -26,6 +26,7 @@ class AnswerResponse(BaseModel):
     evidence_chunk_ids: list[str]
     confidence_label: str
     refusal_reason: str | None
+    generation_model_used: str | None = None
     live_grounding_used: bool = False
     mode: str
     route: str

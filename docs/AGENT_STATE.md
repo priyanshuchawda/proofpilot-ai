@@ -21,10 +21,11 @@ Last updated: 2026-05-24
 - #29: Live health card and browser smoke readiness.
 - #31: Workspace and document management UI.
 - #41: Complete freshness web grounding path.
+- #43: Restore Tailwind utility styling and visual smoke coverage.
 
 ## Current Issue
 
-- #43: Restore Tailwind utility styling and visual smoke coverage. Implementation is in progress on `feat/43-tailwind-ui-styling`.
+- #45: Add observable free-tier fallback for document answer generation. Implementation is in progress on `feat/45-generation-fallback`.
 
 ## Current Architecture Decisions
 
@@ -33,7 +34,7 @@ Last updated: 2026-05-24
 - Use local Docker infrastructure for PostgreSQL, Redis, and Qdrant.
 - Prefer custom RAG over provider-managed File Search for the MVP so retrieval architecture is visible and testable.
 - Treat Gemini model IDs and Google Search grounding as configuration. Search grounding is disabled by default until the selected model is verified as free-tier-safe.
-- Current provider defaults prefer `gemini-3.1-flash-lite` for non-search generation and use `gemini-2.5-flash-lite` as the free-tier-safe Search-grounding fallback.
+- Current provider defaults prefer `gemini-3.1-flash-lite` for non-search generation, retry temporary non-Search overload once through `gemini-2.5-flash-lite`, and use `gemini-2.5-flash-lite` as the separately selected free-tier-safe Search-grounding fallback.
 - Keep real Gemini smoke tests manual only behind `RUN_GEMINI_SMOKE=1`.
 - Use deterministic local embeddings by default for current vector plumbing and tests. Real Gemini embeddings are opt-in with `GEMINI_EMBEDDINGS_ENABLED=true` and `gemini-embedding-2`.
 - Uploaded documents are indexed through `EmbeddingIndexService` after chunk persistence when `UPLOAD_INDEXING_ENABLED=true`; this is synchronous in the MVP and behind a `DocumentIndexer` boundary for later worker extraction.
@@ -47,7 +48,7 @@ Last updated: 2026-05-24
 - Query UI uses the streamed query route, which emits answer deltas and a final structured cited payload. Provider-native Gemini token streaming remains deferred.
 - Frontend local API defaults use `http://127.0.0.1:8000` to avoid Windows `localhost` ambiguity. Override `NEXT_PUBLIC_API_BASE_URL` when port `8000` is already owned by another local project.
 - Dashboard workflow now owns selected workspace state and wires workspace/document management into the query console.
-- Query UI now includes a retrieval trace panel built from the final structured answer payload. It shows route, cache status, confidence, freshness, live grounding usage, query run ID, evidence chunk IDs, cited chunk IDs, and contradiction keys without exposing hidden chain-of-thought.
+- Query UI now includes a retrieval trace panel built from the final structured answer payload. It shows route, effective generation model, cache status, confidence, freshness, live grounding usage, query run ID, evidence chunk IDs, cited chunk IDs, and contradiction keys without exposing hidden chain-of-thought.
 - `GET /api/v1/query-runs/{query_run_id}` exposes persisted trace details for a single query run, including ordered retrieval candidates, cited evidence, generated answer, verification result, and latency metrics. The generated frontend client includes `getQueryRun`.
 - Opt-in Search grounding accepts current-information answers only when Gemini returns grounded web sources, support spans for inline `[web-n]` labels, and required Search Suggestions display metadata. Only sources referenced by support spans become displayed web evidence. The UI distinguishes web sources from uploaded documents and renders provider HTML in a sandboxed iframe.
 - Freshness routing is evaluated before empty document retrieval, allowing an explicitly enabled web-grounded answer without uploaded document evidence. HTTP `429` and `503` Gemini availability responses degrade to safe retry routes without paid fallback.
@@ -156,6 +157,10 @@ Last updated: 2026-05-24
 - Issue #43 live browser smoke: the styled app on `127.0.0.1:3000` rendered padded/radius-defined cards with no horizontal overflow at desktop size and at a `390x844` mobile viewport; the mobile layout reduced the heading to `36px` and collapsed to one column.
 - Issue #43 frontend gate debugging: enabling the larger build toolchain exposed jsdom tests exceeding Vitest's default 5-second per-test limit under parallel execution on Windows; a single-worker diagnostic passed, and the test configuration now uses an explicit 15-second hang threshold while preserving parallel execution.
 - Issue #43 standard local gates: frontend API drift check, lint, typecheck, `pnpm test` passed with 17 tests, and `pnpm build` passed with its compiled Tailwind selector assertion; backend format, lint, pyright, and `uv run pytest -q` passed with 75 tests and 7 opt-in skips; Docker Compose validation, git diff check, and secret-pattern scan passed.
+- Issue #45 focused RED checks: answer-service tests failed on missing ordinary-generation fallback configuration and missing effective model metadata; the query-console trace test failed because it did not render the successful generation model.
+- Issue #45 focused GREEN checks: `uv run pytest tests/test_answer_service.py -q` passed with 15 tests; targeted backend Pyright passed; `pnpm --filter @proofpilot/web test -- app/query-console.test.tsx` passed with 6 tests; generated client drift check passed after OpenAPI regeneration.
+- Issue #45 live provider-boundary smoke: using the ignored local key and a public in-memory evidence chunk, ordinary answer generation succeeded through configured primary `gemini-3.1-flash-lite`, returned one valid citation, and exposed `generation_model_used=gemini-3.1-flash-lite`; automatic fallback remains deterministically covered because a live transient overload cannot be forced safely.
+- Issue #45 standard local gates: frontend API drift check, lint, typecheck, `pnpm test` passed with 17 tests, and `pnpm build` passed with its compiled-style assertion; backend format, lint, pyright, and `uv run pytest -q` passed with 77 tests and 7 opt-in skips; Docker Compose validation, git diff check, and secret-pattern scan passed.
 
 ## Unresolved Risks
 
@@ -170,9 +175,9 @@ Last updated: 2026-05-24
 - Search grounding remains disabled by default. A prior opt-in Search smoke succeeded; a subsequent opt-in call returned provider HTTP `503` under temporary high demand, which Issue #41 now maps to a safe retry route.
 - Issue #19 cache-hit latency metrics are not persisted because cache hits do not create a query run yet. Cache miss query runs persist retrieval, answer, and total latency metrics.
 - Next.js build no longer emits the parent-lockfile workspace-root warning after setting `turbopack.root`. It still emits an upstream `baseline-browser-mapping` staleness warning.
-- Issue #43 has a locally browser-verified fix for missing Tailwind utility compilation; complete quality gates and PR merge remain required.
 - The ignored local `.env` used in one smoke run configured `gemini-2.5-flash-lite` for primary generation; Issue #41 live verification explicitly overrode non-secret model variables to exercise the documented `gemini-3.1-flash-lite` primary and `gemini-2.5-flash-lite` Search fallback.
+- Live indexed-upload smoke found that `QdrantVectorStore.ensure_collection` returns HTTP `409 Conflict` when `proofpilot_chunks` already exists, causing an upload HTTP 500 with indexing enabled. This is tracked in [Issue #46](https://github.com/priyanshuchawda/proofpilot-ai/issues/46) and must be fixed before final end-to-end readiness.
 
 ## Next Issue
 
-- After Issue #43 is merged, add automatic `gemini-3.1-flash-lite` to `gemini-2.5-flash-lite` normal-generation fallback before remaining worker/streaming hardening.
+- Merge Issue #45 after complete gates, then fix Issue #46 Qdrant collection reuse before assessing persisted fallback telemetry and provider-native streaming.

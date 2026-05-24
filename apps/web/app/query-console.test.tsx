@@ -180,6 +180,7 @@ test("renders a retrieval trace from the final streamed answer", async () => {
         ],
         evidence_chunk_ids: ["chunk-a", "chunk-b"],
         confidence_label: "high",
+        generation_model_used: "gemini-2.5-flash-lite",
         refusal_reason: null,
         live_grounding_used: false,
         mode: "verified",
@@ -207,6 +208,7 @@ test("renders a retrieval trace from the final streamed answer", async () => {
   });
   expect(within(trace!).getByText("route_document_verified")).toBeVisible();
   expect(within(trace!).getByText("miss")).toBeVisible();
+  expect(within(trace!).getByText("gemini-2.5-flash-lite")).toBeVisible();
   expect(within(trace!).getByText("query-run-trace")).toBeVisible();
   expect(within(trace!).getByText("chunk-a, chunk-b")).toBeVisible();
   expect(within(trace!).getByText("pricing")).toBeVisible();

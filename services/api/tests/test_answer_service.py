@@ -43,9 +43,27 @@ class FakeGeminiProvider(GeminiProvider):
 class FailingGeminiProvider(GeminiProvider):
     def __init__(self, status_code: int) -> None:
         self.status_code = status_code
+        self.requests: list[GeminiGenerateRequest] = []
 
     async def generate_text(self, request: GeminiGenerateRequest) -> GeminiGenerateResponse:
+        self.requests.append(request)
         raise GeminiProviderUnavailableError(status_code=self.status_code)
+
+
+class PrimaryUnavailableThenFallbackProvider(GeminiProvider):
+    def __init__(self, payload: dict[str, object]) -> None:
+        self.payload = payload
+        self.requests: list[GeminiGenerateRequest] = []
+
+    async def generate_text(self, request: GeminiGenerateRequest) -> GeminiGenerateResponse:
+        self.requests.append(request)
+        if len(self.requests) == 1:
+            raise GeminiProviderUnavailableError(status_code=503)
+        return GeminiGenerateResponse(
+            text=json.dumps(self.payload),
+            model=request.model,
+            provider="fake",
+        )
 
 
 def _evidence(chunk_id: str = "chunk-a") -> EvidenceChunk:
@@ -117,6 +135,101 @@ async def test_answer_service_persists_valid_cited_answer() -> None:
     assert len(cited) == 1
     assert cited[0].chunk_id == "chunk-a"
     assert provider.requests[0].response_json_schema is not None
+    assert answer.generation_model_used == "gemini-2.5-flash-lite"
+
+
+async def test_answer_service_retries_temporary_document_generation_failure_on_free_fallback() -> (
+    None
+):
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    async with engine.begin() as connection:
+        await connection.run_sync(Base.metadata.create_all)
+
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+    async with session_factory() as session:
+        query_run = QueryRun(
+            workspace_id="workspace-a",
+            conversation_id=None,
+            query_text="What does ProofPilot require?",
+            route="route_document_verified",
+            mode="verified",
+            cache_status="miss",
+        )
+        session.add(query_run)
+        await session.commit()
+
+        provider = PrimaryUnavailableThenFallbackProvider(
+            {
+                "answer_text": "ProofPilot requires grounded evidence. [chunk-a]",
+                "citation_chunk_ids": ["chunk-a"],
+            }
+        )
+        service = AnswerService(
+            session=session,
+            gemini_provider=provider,
+            generation_model="gemini-3.1-flash-lite",
+            fallback_generation_model="gemini-2.5-flash-lite",
+        )
+
+        answer = await service.generate_answer(
+            retrieval=RetrievalResult(query_run_id=query_run.id, evidence=[_evidence()]),
+            query="What does ProofPilot require?",
+            mode="verified",
+            route="route_document_verified",
+            freshness_label="not_required",
+            contradictions=[],
+        )
+
+    await engine.dispose()
+
+    assert [request.model for request in provider.requests] == [
+        "gemini-3.1-flash-lite",
+        "gemini-2.5-flash-lite",
+    ]
+    assert answer.refusal_reason is None
+    assert answer.generation_model_used == "gemini-2.5-flash-lite"
+
+
+async def test_answer_service_does_not_retry_document_generation_after_quota_exhaustion() -> None:
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    async with engine.begin() as connection:
+        await connection.run_sync(Base.metadata.create_all)
+
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+    async with session_factory() as session:
+        query_run = QueryRun(
+            workspace_id="workspace-a",
+            conversation_id=None,
+            query_text="What does ProofPilot require?",
+            route="route_document_verified",
+            mode="verified",
+            cache_status="miss",
+        )
+        session.add(query_run)
+        await session.commit()
+
+        provider = FailingGeminiProvider(status_code=429)
+        service = AnswerService(
+            session=session,
+            gemini_provider=provider,
+            generation_model="gemini-3.1-flash-lite",
+            fallback_generation_model="gemini-2.5-flash-lite",
+        )
+
+        answer = await service.generate_answer(
+            retrieval=RetrievalResult(query_run_id=query_run.id, evidence=[_evidence()]),
+            query="What does ProofPilot require?",
+            mode="verified",
+            route="route_document_verified",
+            freshness_label="not_required",
+            contradictions=[],
+        )
+
+    await engine.dispose()
+
+    assert [request.model for request in provider.requests] == ["gemini-3.1-flash-lite"]
+    assert answer.route == "route_quota_exhausted"
+    assert answer.generation_model_used is None
 
 
 async def test_answer_service_refuses_when_no_evidence_exists() -> None:

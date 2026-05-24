@@ -32,7 +32,7 @@ The 2026-05-24 re-check was verified directly against official `ai.google.dev` p
 - Embedding model: `gemini-embedding-2`, disabled by default behind `GEMINI_EMBEDDINGS_ENABLED=false`
 - SDK: official Python `google-genai`
 
-All model IDs are configuration values, not hard-coded architecture assumptions. Normal document-answer generation may use `gemini-3.1-flash-lite` when configured. Search grounding must use a model whose official pricing table marks free-tier grounding as available; if the freshness model is not free-tier-safe for Search, the backend selects `GEMINI_SEARCH_GROUNDING_FALLBACK_MODEL`.
+All model IDs are configuration values, not hard-coded architecture assumptions. Normal document-answer generation may use `gemini-3.1-flash-lite` when configured and may retry one temporary HTTP `503` through configured `GEMINI_LIGHTWEIGHT_MODEL=gemini-2.5-flash-lite`. Search grounding must use a model whose official pricing table marks free-tier grounding as available; if the freshness model is not free-tier-safe for Search, the backend selects `GEMINI_SEARCH_GROUNDING_FALLBACK_MODEL`.
 
 ## Free-Tier-Safe Capabilities
 
@@ -61,7 +61,7 @@ All model IDs are configuration values, not hard-coded architecture assumptions.
 - Search grounding for Gemini 2.5 Flash and Flash-Lite is documented as free up to 500 requests per day shared across the Flash and Flash-Lite RPD. Paid tiers have higher free shared limits and then bill per grounded prompt.
 - Gemini 3 Search grounding has separate free prompt language for supported models, but the Gemini 3.1 Flash-Lite pricing row marks free-tier Search grounding as unavailable. The app must not use Gemini 3.1 Flash-Lite for Search unless official pricing changes and this document is updated.
 - If quota is exhausted, the backend returns `route_quota_exhausted`, preserves retrieval evidence, and allows retry later.
-- If Gemini returns transient service overload such as HTTP `503`, the backend returns `route_provider_unavailable` and allows retry without switching to a paid or unverified model.
+- If ordinary document generation receives HTTP `503` from its configured primary model, the backend may retry once using the configured free-tier lightweight model and reports which model succeeded. A failed fallback or a Search-path overload returns `route_provider_unavailable`. HTTP `429` returns `route_quota_exhausted` without another model call.
 
 ## Live Smoke Result
 

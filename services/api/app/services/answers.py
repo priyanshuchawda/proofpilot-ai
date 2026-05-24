@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.gemini import (
     GeminiGenerateRequest,
+    GeminiGenerateResponse,
     GeminiGroundingSource,
     GeminiProvider,
     GeminiProviderUnavailableError,
@@ -36,11 +37,13 @@ class AnswerService:
         session: AsyncSession,
         gemini_provider: GeminiProvider,
         generation_model: str,
+        fallback_generation_model: str | None = None,
         grounding_model: str | None = None,
     ) -> None:
         self._session = session
         self._gemini_provider = gemini_provider
         self._generation_model = generation_model
+        self._fallback_generation_model = fallback_generation_model
         self._grounding_model = grounding_model or generation_model
 
     async def generate_answer(
@@ -88,13 +91,7 @@ class AnswerService:
 
         prompt = self._build_prompt(query=query, evidence=retrieval.evidence)
         try:
-            response = await self._gemini_provider.generate_text(
-                GeminiGenerateRequest(
-                    prompt=prompt,
-                    model=self._generation_model,
-                    response_json_schema=GeminiCitedAnswer.model_json_schema(),
-                )
-            )
+            response = await self._generate_document_response(prompt=prompt)
         except GeminiProviderUnavailableError as error:
             return await self._persist_provider_unavailable(
                 query_run_id=retrieval.query_run_id,
@@ -151,11 +148,31 @@ class AnswerService:
             evidence_chunk_ids=_chunk_ids(citations),
             confidence_label="medium",
             refusal_reason=None,
+            generation_model_used=response.model,
             mode=mode,
             route=route,
             freshness_label=freshness_label,
             live_grounding_used=route == "route_freshness_required",
             contradictions=contradictions,
+        )
+
+    async def _generate_document_response(self, *, prompt: str) -> GeminiGenerateResponse:
+        request = GeminiGenerateRequest(
+            prompt=prompt,
+            model=self._generation_model,
+            response_json_schema=GeminiCitedAnswer.model_json_schema(),
+        )
+        try:
+            return await self._gemini_provider.generate_text(request)
+        except GeminiProviderUnavailableError as error:
+            if (
+                error.status_code != 503
+                or not self._fallback_generation_model
+                or self._fallback_generation_model == self._generation_model
+            ):
+                raise
+        return await self._gemini_provider.generate_text(
+            request.model_copy(update={"model": self._fallback_generation_model})
         )
 
     async def _generate_freshness_answer(
@@ -245,6 +262,7 @@ class AnswerService:
                 ],
                 confidence_label="medium",
                 refusal_reason=None,
+                generation_model_used=response.model,
                 mode=mode,
                 route=route,
                 freshness_label=freshness_label,
