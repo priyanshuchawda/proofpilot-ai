@@ -26,10 +26,11 @@ Last updated: 2026-05-24
 - #46: Fix idempotent Qdrant collection reuse during indexed upload.
 - #49: Implement PostgreSQL full-text keyword retrieval.
 - #51: Implement queued asynchronous document ingestion worker.
+- #52: Fix configurable strict CORS origins for local frontend ports.
 
 ## Current Issue
 
-- #52: Fix configurable strict CORS origins for local frontend ports. Implementation is in progress on `fix/52-configurable-strict-cors`.
+- #55: Add deterministic Playwright coverage for the cited-answer user flow. Implementation is in progress on `feat/55-playwright-critical-flow`.
 
 ## Current Architecture Decisions
 
@@ -52,6 +53,7 @@ Last updated: 2026-05-24
 - Response caching is workspace-scoped and index-version-scoped. Safe response caching excludes refusals, live-grounded answers, and freshness-required routes.
 - Evaluation runs are deterministic local checks and write ignored JSON summaries under `evals/results/`.
 - Frontend API helpers are generated from the FastAPI OpenAPI schema under `packages/generated-api-client` and checked with `pnpm api:check`.
+- Playwright runs the production frontend locally and covers the public upload-to-cited-answer browser flow through controlled API/SSE fixtures. It is UI-contract verification only and never uses Gemini keys, model calls, or private documents.
 - Query UI uses the streamed query route, which emits answer deltas and a final structured cited payload. Provider-native Gemini token streaming remains deferred.
 - Frontend local API defaults use `http://127.0.0.1:8000` to avoid Windows `localhost` ambiguity. Override `NEXT_PUBLIC_API_BASE_URL` when port `8000` is already owned by another local project.
 - Dashboard workflow now owns selected workspace state and wires workspace/document management into the query console.
@@ -187,12 +189,16 @@ Last updated: 2026-05-24
 - Issue #52 focused GREEN checks: `uv run ruff check app/core/config.py app/main.py tests/test_cors.py`, `uv run pyright app/core/config.py app/main.py tests/test_cors.py`, and `uv run pytest tests/test_cors.py tests/test_health.py tests/test_ai_settings.py -q` passed with 4 tests.
 - Issue #52 standard local gates: backend format, lint, Pyright, and `uv run pytest -q` passed with 85 tests and 13 opt-in skips; frontend API drift check, lint, typecheck, `pnpm test` passed with 19 tests, and `pnpm build` passed with compiled-style verification; Docker Compose validation, whitespace checks, and tracked secret-pattern scan passed.
 - Issue #52 live alternate-origin smoke: with `PROOFPILOT_API_CORS_ORIGINS=http://127.0.0.1:3011`, the browser rendered `API healthy` from the frontend on port `3011`, and live POST preflight allowed origin `3011` while omitting an allow-origin header for unconfigured port `3012`. Browser form typing could not be exercised because the local browser runtime lacked its virtual clipboard helper.
+- Issue #55 RED check: `pnpm e2e` failed before implementation because the repository had no Playwright E2E command.
+- Issue #55 focused GREEN check: `pnpm e2e` passed with one Chromium test covering public upload status, Verified Mode cited answer rendering, and retrieval trace display; production-mode server startup left tracked Next.js generated types unchanged.
+- Issue #55 runner isolation check: the first full frontend run failed because Vitest collected the Playwright spec; restricting Vitest discovery to `app/**/*.test.{ts,tsx}` separated component tests from browser specifications.
+- Issue #55 standard local gates: backend format, lint, Pyright, and `uv run pytest -q` passed with 85 tests and 13 opt-in skips; frontend API drift check, lint, typecheck, `pnpm test` passed with 19 tests, `pnpm build` passed with compiled-style verification, and `pnpm e2e` passed with 1 browser test while leaving generated types clean.
 
 ## Unresolved Risks
 
 - GitHub Actions are intentionally disabled for now to avoid spending Actions minutes before final hardening.
 - File Search pricing details must be rechecked before managed File Search integration code is added.
-- Playwright end-to-end automation is not yet wired into the repository quality gates; later UI verification has used the in-app browser plus component tests.
+- Standard Playwright coverage uses deterministic browser-intercepted API fixtures; a fully automated Docker-backed browser flow with the worker and opt-in Gemini provider remains future hardening.
 - Local PostgreSQL uses host port `55432` to avoid a personal Postgres conflict on `5432`.
 - Provider-native Gemini token streaming remains a later enhancement. The current stream transport emits deltas from the finalized cited answer text.
 - Local `.env` may point `DATABASE_URL` at `localhost:5432`; Docker Compose PostgreSQL is exposed on `127.0.0.1:55432`, so local smoke commands should override `DATABASE_URL` or update the ignored `.env` value.
@@ -205,4 +211,4 @@ Last updated: 2026-05-24
 
 ## Next Issue
 
-- Complete Issue #52 live alternate-port browser verification and gates, merge it, then add Playwright E2E, rate limiting, and structured operational telemetry.
+- Complete Issue #55 local gates and merge it, then implement rate limiting and structured operational telemetry.

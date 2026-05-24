@@ -6,6 +6,7 @@
     "api:check": "cd services/api && uv run python ../../scripts/generate_api_client.py --check",
     "api:generate": "cd services/api && uv run python ../../scripts/generate_api_client.py",
     "build": "pnpm --filter @proofpilot/web build",
+    "e2e": "pnpm --filter @proofpilot/web e2e",
     "lint": "pnpm --filter @proofpilot/web lint",
     "test": "pnpm --filter @proofpilot/web test",
     "typecheck": "pnpm --filter @proofpilot/web typecheck"

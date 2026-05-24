@@ -161,6 +161,16 @@ pnpm test
 pnpm build
 ```
 
+Browser end-to-end flow:
+
+```powershell
+# First run on a new machine only:
+pnpm --filter @proofpilot/web exec playwright install chromium
+pnpm e2e
+```
+
+The Playwright gate runs the production frontend locally and uses deterministic browser-intercepted API/SSE fixtures for the public upload-to-cited-answer flow. It does not use `GEMINI_API_KEY`, Docker services, or a real model request.
+
 Infrastructure:
 
 ```powershell

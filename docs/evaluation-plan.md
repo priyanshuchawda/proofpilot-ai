@@ -30,3 +30,7 @@ The MVP evaluation API exposes:
 - `POST /api/v1/evaluations/run`
 - `GET /api/v1/evaluations/runs/{run_id}`
 - `GET /api/v1/metrics/summary`
+
+## Browser Contract Verification
+
+`pnpm e2e` runs a deterministic Playwright flow against the production frontend build. It validates workspace creation, public document upload status progression, Verified Mode SSE rendering, document citation display, and persisted retrieval trace display using controlled API fixtures. This check validates UI orchestration only; it is not counted as Gemini quality, backend persistence, or worker/indexing evidence.
