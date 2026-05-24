@@ -15,3 +15,10 @@ class LocalFileStorage:
             raise ValueError("Resolved upload path escaped storage root.")
         target.write_bytes(content)
         return target
+
+    def read(self, storage_path: str) -> bytes:
+        target = Path(storage_path).resolve()
+        root = self._root.resolve()
+        if root not in target.parents:
+            raise ValueError("Resolved upload path escaped storage root.")
+        return target.read_bytes()

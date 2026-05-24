@@ -24,10 +24,11 @@ Last updated: 2026-05-24
 - #43: Restore Tailwind utility styling and visual smoke coverage.
 - #45: Add observable free-tier fallback for document answer generation.
 - #46: Fix idempotent Qdrant collection reuse during indexed upload.
+- #49: Implement PostgreSQL full-text keyword retrieval.
 
 ## Current Issue
 
-- #49: Implement PostgreSQL full-text keyword retrieval. Implementation is in progress on `feat/49-postgres-full-text-retrieval`.
+- #51: Implement queued asynchronous document ingestion worker. Implementation is in progress on `feat/51-async-ingestion-worker`.
 
 ## Current Architecture Decisions
 
@@ -39,8 +40,9 @@ Last updated: 2026-05-24
 - Current provider defaults prefer `gemini-3.1-flash-lite` for non-search generation, retry temporary non-Search overload once through `gemini-2.5-flash-lite`, and use `gemini-2.5-flash-lite` as the separately selected free-tier-safe Search-grounding fallback.
 - Keep real Gemini smoke tests manual only behind `RUN_GEMINI_SMOKE=1`.
 - Use deterministic local embeddings by default for current vector plumbing and tests. Real Gemini embeddings are opt-in with `GEMINI_EMBEDDINGS_ENABLED=true` and `gemini-embedding-2`.
-- Uploaded documents are indexed through `EmbeddingIndexService` after chunk persistence when `UPLOAD_INDEXING_ENABLED=true`; this is synchronous in the MVP and behind a `DocumentIndexer` boundary for later worker extraction.
-- Qdrant collection setup is idempotent when the stored vector dimension and distance metric match the active embedding and search contract. An incompatible configuration is rejected through a typed error and surfaced to upload callers as a non-sensitive conflict.
+- Uploaded documents return `uploaded` after validated local storage and Redis enqueue. A local Python worker uses the existing `DocumentIndexer` boundary to parse, redact, chunk, embed, and index documents while persisting lifecycle status.
+- Redis ingestion jobs use pending and in-flight lists. The worker acknowledges terminal processing and requeues unacknowledged work at startup; the recovery contract supports one local worker process and resumes already committed chunk stages safely.
+- Qdrant collection setup is idempotent when the stored vector dimension and distance metric match the active embedding and search contract. Under asynchronous processing, incompatible configuration is recorded as a non-sensitive failed ingestion status.
 - Hybrid retrieval uses deterministic Reciprocal Rank Fusion over dense Qdrant IDs and workspace-scoped PostgreSQL full-text candidates, with trace rows persisted for inspection. SQLite unit tests inject deterministic keyword scoring behind the same typed retriever boundary.
 - Cited answer generation validates generated citation IDs against retrieved evidence and refuses when evidence is missing or citations are fabricated.
 - Query routing now labels Fast Mode, Verified Mode, no-evidence, and freshness-required routes. Verified Mode includes deterministic contradiction detection for simple numeric claims.
@@ -172,6 +174,13 @@ Last updated: 2026-05-24
 - Issue #49 focused GREEN checks: SQLite hybrid retrieval passed with an injected deterministic retriever (`3 passed`); Docker PostgreSQL retrieval passed stemming, workspace isolation, and GIN-index assertions (`2 passed`); migration `0002_chunk_fts_index` passed upgrade, downgrade to `0001_initial_schema`, and re-upgrade.
 - Issue #49 live endpoint smoke: with Docker infrastructure and the ignored local Gemini key, a public indexed document containing singular `decision` answered a plural `decisions` question with one valid citation through `gemini-3.1-flash-lite`; the persisted trace recorded the document as a `hybrid` candidate, proving the production keyword path participated.
 - Issue #49 standard local gates: backend format, lint, Pyright, and `uv run pytest -q` passed with 78 tests and 12 opt-in skips; Docker-backed PostgreSQL/Redis/Qdrant integration passed with 9 tests; frontend API drift check, lint, typecheck, `pnpm test` passed with 17 tests, and `pnpm build` passed with compiled-style verification; Docker Compose validation, git diff check, and secret-pattern scan passed.
+- Issue #51 RED checks: worker tests failed because completed jobs were not acknowledged; Redis integration failed because abandoned-job recovery was absent; frontend polling tests failed because processing failures had no safe user-facing guidance; interrupted document processing failed on duplicate chunk insertion when resumed.
+- Issue #51 focused GREEN checks: backend API/service/worker tests passed with 8 tests; Docker Redis/Qdrant queue-to-indexing tests passed with 5 tests; frontend workspace status tests passed with 4 tests plus typecheck and lint.
+- Issue #51 standard local gates: backend format, lint, Pyright, and `uv run pytest -q` passed with 83 tests and 13 opt-in skips; frontend API drift check, lint, typecheck, `pnpm test` passed with 19 tests, and `pnpm build` passed with compiled-style verification; Docker Compose validation, whitespace checks, and tracked secret-pattern scan passed.
+- Issue #51 Docker verification: PostgreSQL/Redis/Qdrant integration passed with 10 tests and Alembic passed upgrade, downgrade to `0001_initial_schema`, and re-upgrade of `0002_chunk_fts_index`.
+- Issue #51 live API/worker smoke: using a public Markdown document, deterministic local indexing for the existing Qdrant dimension, and the ignored local key for generation, upload returned `uploaded`, the worker reached `ready`, and Verified Mode returned one cited candidate through `gemini-3.1-flash-lite`.
+- Issue #51 provider smoke: opt-in `gemini-embedding-2` embedding verification passed with the ignored local API key without printing key material.
+- Issue #51 live UI smoke: the in-app browser rendered the dashboard/privacy warning, created a public demo workspace, and displayed a public worker-indexed document as `ready`. Its browser runtime does not support file chooser uploads, so the file was submitted through the already verified local API while polling behavior remains component-tested.
 
 ## Unresolved Risks
 
@@ -186,7 +195,9 @@ Last updated: 2026-05-24
 - Issue #19 cache-hit latency metrics are not persisted because cache hits do not create a query run yet. Cache miss query runs persist retrieval, answer, and total latency metrics.
 - Next.js build no longer emits the parent-lockfile workspace-root warning after setting `turbopack.root`. It still emits an upstream `baseline-browser-mapping` staleness warning.
 - The ignored local `.env` used in one smoke run configured `gemini-2.5-flash-lite` for primary generation; Issue #41 live verification explicitly overrode non-secret model variables to exercise the documented `gemini-3.1-flash-lite` primary and `gemini-2.5-flash-lite` Search fallback.
+- Issue #51 Redis ingestion recovery supports one active local worker; multi-worker leasing and heartbeats are deferred.
+- Live Issue #51 UI verification exposed that `PROOFPILOT_API_CORS_ORIGINS` is not wired into the API and alternate frontend ports are blocked; GitHub Issue #52 tracks the strict configurable CORS fix. Use frontend port `3000` until then.
 
 ## Next Issue
 
-- Merge Issue #49 after complete gates, then assess provider-native streaming, async ingestion worker extraction, and persisted fallback telemetry as remaining readiness work.
+- Merge Issue #51, then implement Issue #52 strict configurable CORS before adding Playwright E2E, rate limiting, and structured operational telemetry.

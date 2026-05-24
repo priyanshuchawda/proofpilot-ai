@@ -29,7 +29,7 @@ class DocumentService:
         self._storage = LocalFileStorage(storage_root)
         self._document_indexer = document_indexer
 
-    async def ingest_upload(
+    async def create_upload(
         self,
         *,
         workspace_id: str,
@@ -64,49 +64,127 @@ class DocumentService:
         document.current_version_id = version.id
         job = IngestionJob(document_version_id=version.id, status="uploaded")
         self._session.add(job)
-
-        pages = extract_pages(filename, content)
-        job.status = "parsed"
-
-        redacted_pages: list[SourcePage] = []
-        redaction_status = "clean"
-        for page in pages:
-            redacted = redact_secrets(page.text)
-            if redacted.status == "redacted":
-                redaction_status = "redacted"
-            redacted_pages.append(SourcePage(page_number=page.page_number, text=redacted.text))
-
-        chunks = chunk_pages(redacted_pages)
-        job.status = "chunked"
-
-        for chunk in chunks:
-            self._session.add(
-                DocumentChunk(
-                    workspace_id=workspace_id,
-                    document_id=document.id,
-                    document_version_id=version.id,
-                    source_filename=filename,
-                    mime_type=document.mime_type,
-                    page_number=chunk.page_number,
-                    section_heading=chunk.section_heading,
-                    chunk_order=chunk.chunk_order,
-                    chunk_text=chunk.text,
-                    token_estimate=chunk.token_estimate,
-                    content_hash=sha256(chunk.text.encode("utf-8")).hexdigest(),
-                    redaction_status=redaction_status,
-                )
-            )
-
-        document.status = "ready"
-        await self._session.flush()
-        if self._document_indexer is not None:
-            job.status = "indexed"
-            await self._document_indexer.index_document(document_id=document.id)
-
-        job.status = "ready"
         await self._session.commit()
         await self._session.refresh(document)
         return document
+
+    async def process_document(self, *, document_id: str) -> Document:
+        document = await self.get_document(document_id=document_id)
+        if document is None or document.current_version_id is None:
+            raise ValueError("Document is not available for processing.")
+        if document.status in {"ready", "failed"}:
+            return document
+        version = await self._session.get(DocumentVersion, document.current_version_id)
+        if version is None:
+            raise ValueError("Document version is not available for processing.")
+        job = (
+            (
+                await self._session.execute(
+                    select(IngestionJob).where(IngestionJob.document_version_id == version.id)
+                )
+            )
+            .scalars()
+            .one()
+        )
+
+        try:
+            if document.status in {"uploaded", "parsed"}:
+                content = self._storage.read(version.storage_path)
+                pages = extract_pages(document.filename, content)
+                if document.status == "uploaded":
+                    document.status = "parsed"
+                    job.status = "parsed"
+                    await self._session.commit()
+
+                redacted_pages: list[SourcePage] = []
+                redaction_status = "clean"
+                for page in pages:
+                    redacted = redact_secrets(page.text)
+                    if redacted.status == "redacted":
+                        redaction_status = "redacted"
+                    redacted_pages.append(
+                        SourcePage(page_number=page.page_number, text=redacted.text)
+                    )
+
+                chunks = chunk_pages(redacted_pages)
+                for chunk in chunks:
+                    self._session.add(
+                        DocumentChunk(
+                            workspace_id=document.workspace_id,
+                            document_id=document.id,
+                            document_version_id=version.id,
+                            source_filename=document.filename,
+                            mime_type=document.mime_type,
+                            page_number=chunk.page_number,
+                            section_heading=chunk.section_heading,
+                            chunk_order=chunk.chunk_order,
+                            chunk_text=chunk.text,
+                            token_estimate=chunk.token_estimate,
+                            content_hash=sha256(chunk.text.encode("utf-8")).hexdigest(),
+                            redaction_status=redaction_status,
+                        )
+                    )
+                document.status = "chunked"
+                job.status = "chunked"
+                await self._session.commit()
+
+            if document.status == "chunked" and self._document_indexer is not None:
+                await self._document_indexer.index_document(document_id=document.id)
+                document.status = "embedded"
+                job.status = "embedded"
+                await self._session.commit()
+
+            if document.status == "embedded":
+                document.status = "indexed"
+                job.status = "indexed"
+                await self._session.commit()
+
+            document.status = "ready"
+            job.status = "ready"
+            await self._session.commit()
+        except Exception:
+            await self._session.rollback()
+            document = await self.get_document(document_id=document_id)
+            if document is None:
+                raise
+            job = (
+                (
+                    await self._session.execute(
+                        select(IngestionJob).where(
+                            IngestionJob.document_version_id == document.current_version_id
+                        )
+                    )
+                )
+                .scalars()
+                .one()
+            )
+            document.status = "failed"
+            job.status = "failed"
+            job.error_message = "Document processing failed."
+            await self._session.commit()
+
+        await self._session.refresh(document)
+        return document
+
+    async def mark_failed(self, *, document_id: str) -> None:
+        document = await self.get_document(document_id=document_id)
+        if document is None or document.current_version_id is None:
+            return
+        job = (
+            (
+                await self._session.execute(
+                    select(IngestionJob).where(
+                        IngestionJob.document_version_id == document.current_version_id
+                    )
+                )
+            )
+            .scalars()
+            .one()
+        )
+        document.status = "failed"
+        job.status = "failed"
+        job.error_message = "Document processing could not be queued."
+        await self._session.commit()
 
     async def list_documents(self, *, workspace_id: str) -> list[Document]:
         result = await self._session.execute(

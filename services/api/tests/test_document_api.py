@@ -3,25 +3,52 @@ from collections.abc import AsyncIterator
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from app.api.documents import get_document_service
+from app.api.documents import get_document_service, get_ingestion_queue
 from app.core.config import Settings, get_settings
 from app.db.base import Base
+from app.db.models import Document
 from app.db.session import get_db_session
+from app.ingestion.queue import IngestionQueueUnavailableError
 from app.main import app
-from app.vector.qdrant import QdrantCollectionConfigurationError
 
 
-class MismatchedVectorCollectionService:
-    async def ingest_upload(
+class FakeIngestionQueue:
+    def __init__(self) -> None:
+        self.document_ids: list[str] = []
+
+    async def enqueue(self, *, document_id: str) -> None:
+        self.document_ids.append(document_id)
+
+
+class UnavailableIngestionQueue:
+    async def enqueue(self, *, document_id: str) -> None:
+        del document_id
+        raise IngestionQueueUnavailableError("Redis connection failed")
+
+
+class AcceptedDocumentService:
+    def __init__(self) -> None:
+        self.failed_ids: list[str] = []
+
+    async def create_upload(
         self,
         *,
         workspace_id: str,
         filename: str,
         content_type: str | None,
         content: bytes,
-    ) -> None:
-        del workspace_id, filename, content_type, content
-        raise QdrantCollectionConfigurationError("configured vector dimension does not match")
+    ) -> Document:
+        del content
+        return Document(
+            id="document-id",
+            workspace_id=workspace_id,
+            filename=filename,
+            mime_type=content_type or "application/octet-stream",
+            status="uploaded",
+        )
+
+    async def mark_failed(self, *, document_id: str) -> None:
+        self.failed_ids.append(document_id)
 
 
 async def test_upload_list_and_status_for_text_document() -> None:
@@ -37,6 +64,8 @@ async def test_upload_list_and_status_for_text_document() -> None:
 
     app.dependency_overrides[get_db_session] = test_session
     app.dependency_overrides[get_settings] = lambda: Settings(upload_indexing_enabled=False)
+    queue = FakeIngestionQueue()
+    app.dependency_overrides[get_ingestion_queue] = lambda: queue
     transport = ASGITransport(app=app)
     try:
         async with AsyncClient(transport=transport, base_url="http://testserver") as client:
@@ -58,17 +87,20 @@ async def test_upload_list_and_status_for_text_document() -> None:
 
     assert upload_response.status_code == 201
     assert uploaded["filename"] == "notes.md"
-    assert uploaded["status"] == "ready"
-    assert uploaded["chunk_count"] == 1
+    assert uploaded["status"] == "uploaded"
+    assert uploaded["chunk_count"] == 0
+    assert queue.document_ids == [uploaded["id"]]
 
     assert list_response.status_code == 200
     assert list_response.json() == [uploaded]
     assert status_response.status_code == 200
-    assert status_response.json()["status"] == "ready"
+    assert status_response.json()["status"] == "uploaded"
 
 
-async def test_upload_reports_vector_collection_configuration_mismatch() -> None:
-    app.dependency_overrides[get_document_service] = lambda: MismatchedVectorCollectionService()
+async def test_upload_reports_queue_unavailability_without_internal_details() -> None:
+    service = AcceptedDocumentService()
+    app.dependency_overrides[get_document_service] = lambda: service
+    app.dependency_overrides[get_ingestion_queue] = lambda: UnavailableIngestionQueue()
     transport = ASGITransport(app=app, raise_app_exceptions=False)
     try:
         async with AsyncClient(transport=transport, base_url="http://testserver") as client:
@@ -79,7 +111,8 @@ async def test_upload_reports_vector_collection_configuration_mismatch() -> None
     finally:
         app.dependency_overrides.clear()
 
-    assert response.status_code == 409
+    assert response.status_code == 503
     assert response.json() == {
-        "detail": "Document cannot be indexed with the configured vector collection."
+        "detail": "Document processing queue is unavailable. Try again later."
     }
+    assert service.failed_ids == ["document-id"]
