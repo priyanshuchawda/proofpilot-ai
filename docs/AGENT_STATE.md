@@ -24,7 +24,7 @@ Last updated: 2026-05-24
 
 ## Current Issue
 
-- #41: Complete freshness web grounding path. Implementation and local verification are complete on `feat/41-freshness-web-grounding`; PR #42 is open pending final amended verification and merge.
+- #43: Restore Tailwind utility styling and visual smoke coverage. Implementation is in progress on `feat/43-tailwind-ui-styling`.
 
 ## Current Architecture Decisions
 
@@ -51,6 +51,7 @@ Last updated: 2026-05-24
 - `GET /api/v1/query-runs/{query_run_id}` exposes persisted trace details for a single query run, including ordered retrieval candidates, cited evidence, generated answer, verification result, and latency metrics. The generated frontend client includes `getQueryRun`.
 - Opt-in Search grounding accepts current-information answers only when Gemini returns grounded web sources, support spans for inline `[web-n]` labels, and required Search Suggestions display metadata. Only sources referenced by support spans become displayed web evidence. The UI distinguishes web sources from uploaded documents and renders provider HTML in a sandboxed iframe.
 - Freshness routing is evaluated before empty document retrieval, allowing an explicitly enabled web-grounded answer without uploaded document evidence. HTTP `429` and `503` Gemini availability responses degrade to safe retry routes without paid fallback.
+- The Next.js frontend compiles Tailwind v4 through its official PostCSS plugin, and its production build asserts that representative utility selectors are emitted so an unstyled UI cannot pass unnoticed.
 - Final documentation must keep GitHub Actions deferred until explicit final CI enablement.
 
 ## Commands That Passed
@@ -150,6 +151,11 @@ Last updated: 2026-05-24
 - Issue #41 standard local gates after review fix: backend format, lint, pyright, and `uv run pytest -q` passed with 75 tests and 7 opt-in skips; frontend API drift check, lint, typecheck, `pnpm test` passed with 17 tests, and `pnpm build`; Docker Compose validation; Docker-backed PostgreSQL/Redis/Qdrant integration passed with 4 tests; secret-pattern scan matched only intentional redaction fixtures.
 - Issue #41 live API smoke: with the API on `127.0.0.1:8013`, explicit `gemini-3.1-flash-lite` primary configuration, Search via `gemini-2.5-flash-lite`, and an empty workspace, a current-information query returned `route_freshness_required`, `live_grounding_used=true`, 7 web citations, inline `[web-n]` labels, and Search Suggestions metadata.
 - Issue #41 live browser smoke: the UI on `127.0.0.1:3000` displayed primary/Search model routing and, during a later provider-overload response, rendered `route_provider_unavailable` with a safe retry message and persisted latency trace rather than fabricated evidence.
+- Issue #43 RED check: `pnpm --filter @proofpilot/web build` failed after adding the CSS-output assertion because the existing build emitted no Tailwind utility selectors.
+- Issue #43 focused GREEN check: after adding the official Tailwind v4 PostCSS integration, `pnpm --filter @proofpilot/web build` emitted representative utility CSS and passed the assertion.
+- Issue #43 live browser smoke: the styled app on `127.0.0.1:3000` rendered padded/radius-defined cards with no horizontal overflow at desktop size and at a `390x844` mobile viewport; the mobile layout reduced the heading to `36px` and collapsed to one column.
+- Issue #43 frontend gate debugging: enabling the larger build toolchain exposed jsdom tests exceeding Vitest's default 5-second per-test limit under parallel execution on Windows; a single-worker diagnostic passed, and the test configuration now uses an explicit 15-second hang threshold while preserving parallel execution.
+- Issue #43 standard local gates: frontend API drift check, lint, typecheck, `pnpm test` passed with 17 tests, and `pnpm build` passed with its compiled Tailwind selector assertion; backend format, lint, pyright, and `uv run pytest -q` passed with 75 tests and 7 opt-in skips; Docker Compose validation, git diff check, and secret-pattern scan passed.
 
 ## Unresolved Risks
 
@@ -164,9 +170,9 @@ Last updated: 2026-05-24
 - Search grounding remains disabled by default. A prior opt-in Search smoke succeeded; a subsequent opt-in call returned provider HTTP `503` under temporary high demand, which Issue #41 now maps to a safe retry route.
 - Issue #19 cache-hit latency metrics are not persisted because cache hits do not create a query run yet. Cache miss query runs persist retrieval, answer, and total latency metrics.
 - Next.js build no longer emits the parent-lockfile workspace-root warning after setting `turbopack.root`. It still emits an upstream `baseline-browser-mapping` staleness warning.
-- Browser smoke exposed that Tailwind utility classes are not currently emitted in the live app because the Tailwind v4 PostCSS integration is missing; global base colors load, but the intended polished layout styling does not. This requires a focused frontend fix before final demo readiness.
+- Issue #43 has a locally browser-verified fix for missing Tailwind utility compilation; complete quality gates and PR merge remain required.
 - The ignored local `.env` used in one smoke run configured `gemini-2.5-flash-lite` for primary generation; Issue #41 live verification explicitly overrode non-secret model variables to exercise the documented `gemini-3.1-flash-lite` primary and `gemini-2.5-flash-lite` Search fallback.
 
 ## Next Issue
 
-- Open and merge Issue #41 PR, then fix the missing Tailwind v4 processing path and add automatic `gemini-3.1-flash-lite` to `gemini-2.5-flash-lite` normal-generation fallback before remaining worker/streaming hardening.
+- After Issue #43 is merged, add automatic `gemini-3.1-flash-lite` to `gemini-2.5-flash-lite` normal-generation fallback before remaining worker/streaming hardening.
