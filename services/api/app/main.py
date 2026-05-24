@@ -9,6 +9,7 @@ from app.api.query import router as query_router
 from app.api.query_runs import router as query_runs_router
 from app.api.settings import router as settings_router
 from app.api.workspaces import router as workspaces_router
+from app.core.config import Settings, get_settings
 
 
 class HealthResponse(BaseModel):
@@ -17,30 +18,37 @@ class HealthResponse(BaseModel):
     version: str
 
 
-app = FastAPI(
-    title="ProofPilot AI API",
-    version="0.1.0",
-    docs_url="/api/docs",
-    openapi_url="/api/v1/openapi.json",
-)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
-    allow_credentials=False,
-    allow_methods=["GET", "POST"],
-    allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
-)
-
-app.include_router(settings_router)
-app.include_router(health_router)
-app.include_router(workspaces_router)
-app.include_router(documents_router)
-app.include_router(query_router)
-app.include_router(query_runs_router)
-app.include_router(evaluations_router)
-
-
-@app.get("/api/v1/health", response_model=HealthResponse)
 async def health() -> HealthResponse:
     return HealthResponse(service="proofpilot-api", status="ok", version="0.1.0")
+
+
+def create_app(settings: Settings | None = None) -> FastAPI:
+    application = FastAPI(
+        title="ProofPilot AI API",
+        version="0.1.0",
+        docs_url="/api/docs",
+        openapi_url="/api/v1/openapi.json",
+    )
+    active_settings = settings or get_settings()
+    application.add_middleware(
+        CORSMiddleware,
+        allow_origins=active_settings.cors_origins,
+        allow_credentials=False,
+        allow_methods=["GET", "POST"],
+        allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
+    )
+    application.include_router(settings_router)
+    application.include_router(health_router)
+    application.include_router(workspaces_router)
+    application.include_router(documents_router)
+    application.include_router(query_router)
+    application.include_router(query_runs_router)
+    application.include_router(evaluations_router)
+    application.add_api_route(
+        "/api/v1/health", health, methods=["GET"], response_model=HealthResponse
+    )
+
+    return application
+
+
+app = create_app()

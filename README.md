@@ -103,7 +103,7 @@ pnpm --filter @proofpilot/web dev
 
 Open `http://localhost:3000`.
 
-If another local project already owns backend port `8000`, run the ProofPilot API on another port and set `NEXT_PUBLIC_API_BASE_URL` before starting the frontend, for example `http://127.0.0.1:8010`. Until Issue #52 is complete, run the frontend itself on port `3000` because the API currently permits that browser origin only.
+If another local project already owns backend port `8000`, run the ProofPilot API on another port and set `NEXT_PUBLIC_API_BASE_URL` before starting the frontend, for example `http://127.0.0.1:8010`. If you run the frontend on another port, add its explicit origin to `PROOFPILOT_API_CORS_ORIGINS`; wildcard origins are rejected.
 
 ## Environment Variables
 
@@ -219,7 +219,6 @@ These are not human-reviewed answer-quality scores.
 - Provider-native token streaming is not yet implemented; the stream currently emits deltas from the finalized cited answer payload.
 - Deterministic local embeddings are the default; real Gemini embeddings are opt-in with `GEMINI_EMBEDDINGS_ENABLED=true`.
 - Redis ingestion recovery currently supports one local worker process; distributed leases and worker scaling are deferred.
-- Configurable browser CORS origins are tracked in Issue #52; until it is fixed, local browser UI operation uses frontend port `3000`.
 - Evaluation outcomes are deterministic harness results, not human quality review.
 - GitHub Actions are intentionally deferred until final hardening to avoid spending Actions minutes early.
 

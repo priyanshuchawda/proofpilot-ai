@@ -13,4 +13,4 @@
 
 Do not show `.env`, API keys, raw secrets, private documents, or screenshots containing credentials.
 
-If another local project owns backend port `8000`, run the backend on a free port and start the frontend with `NEXT_PUBLIC_API_BASE_URL` pointing to that local backend. Keep the frontend on port `3000` until Issue #52 adds validated configurable CORS origins.
+If another local project owns backend port `8000`, run the backend on a free port and start the frontend with `NEXT_PUBLIC_API_BASE_URL` pointing to that local backend. If the frontend also uses a non-default port, configure its exact origin in `PROOFPILOT_API_CORS_ORIGINS`.
