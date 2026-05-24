@@ -3,6 +3,7 @@
 ## API Keys
 
 - `GEMINI_API_KEY` is read only by backend services.
+- Browser access uses a validated `PROOFPILOT_API_CORS_ORIGINS` allowlist; wildcard origins and URL-like values containing paths, credentials, query strings, or fragments are rejected.
 - Frontend code must never import Gemini SDKs or receive API keys.
 - `.env`, `.env.local`, credentials, and generated secret files are ignored by Git.
 - Local development reads `.env` from the repository root. Do not place keys in frontend files or `NEXT_PUBLIC_*` variables.

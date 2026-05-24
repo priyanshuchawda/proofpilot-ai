@@ -25,10 +25,11 @@ Last updated: 2026-05-24
 - #45: Add observable free-tier fallback for document answer generation.
 - #46: Fix idempotent Qdrant collection reuse during indexed upload.
 - #49: Implement PostgreSQL full-text keyword retrieval.
+- #51: Implement queued asynchronous document ingestion worker.
 
 ## Current Issue
 
-- #51: Implement queued asynchronous document ingestion worker. Implementation is in progress on `feat/51-async-ingestion-worker`.
+- #52: Fix configurable strict CORS origins for local frontend ports. Implementation is in progress on `fix/52-configurable-strict-cors`.
 
 ## Current Architecture Decisions
 
@@ -42,6 +43,7 @@ Last updated: 2026-05-24
 - Use deterministic local embeddings by default for current vector plumbing and tests. Real Gemini embeddings are opt-in with `GEMINI_EMBEDDINGS_ENABLED=true` and `gemini-embedding-2`.
 - Uploaded documents return `uploaded` after validated local storage and Redis enqueue. A local Python worker uses the existing `DocumentIndexer` boundary to parse, redact, chunk, embed, and index documents while persisting lifecycle status.
 - Redis ingestion jobs use pending and in-flight lists. The worker acknowledges terminal processing and requeues unacknowledged work at startup; the recovery contract supports one local worker process and resumes already committed chunk stages safely.
+- Browser CORS uses a validated explicit-origin allowlist from `PROOFPILOT_API_CORS_ORIGINS`; wildcard origins and URL values containing credentials or non-origin components are rejected.
 - Qdrant collection setup is idempotent when the stored vector dimension and distance metric match the active embedding and search contract. Under asynchronous processing, incompatible configuration is recorded as a non-sensitive failed ingestion status.
 - Hybrid retrieval uses deterministic Reciprocal Rank Fusion over dense Qdrant IDs and workspace-scoped PostgreSQL full-text candidates, with trace rows persisted for inspection. SQLite unit tests inject deterministic keyword scoring behind the same typed retriever boundary.
 - Cited answer generation validates generated citation IDs against retrieved evidence and refuses when evidence is missing or citations are fabricated.
@@ -181,6 +183,10 @@ Last updated: 2026-05-24
 - Issue #51 live API/worker smoke: using a public Markdown document, deterministic local indexing for the existing Qdrant dimension, and the ignored local key for generation, upload returned `uploaded`, the worker reached `ready`, and Verified Mode returned one cited candidate through `gemini-3.1-flash-lite`.
 - Issue #51 provider smoke: opt-in `gemini-embedding-2` embedding verification passed with the ignored local API key without printing key material.
 - Issue #51 live UI smoke: the in-app browser rendered the dashboard/privacy warning, created a public demo workspace, and displayed a public worker-indexed document as `ready`. Its browser runtime does not support file chooser uploads, so the file was submitted through the already verified local API while polling behavior remains component-tested.
+- Issue #52 RED check: `uv run pytest tests/test_cors.py -q` failed because the application did not yet expose a settings-driven app factory and CORS origins were hard-coded.
+- Issue #52 focused GREEN checks: `uv run ruff check app/core/config.py app/main.py tests/test_cors.py`, `uv run pyright app/core/config.py app/main.py tests/test_cors.py`, and `uv run pytest tests/test_cors.py tests/test_health.py tests/test_ai_settings.py -q` passed with 4 tests.
+- Issue #52 standard local gates: backend format, lint, Pyright, and `uv run pytest -q` passed with 85 tests and 13 opt-in skips; frontend API drift check, lint, typecheck, `pnpm test` passed with 19 tests, and `pnpm build` passed with compiled-style verification; Docker Compose validation, whitespace checks, and tracked secret-pattern scan passed.
+- Issue #52 live alternate-origin smoke: with `PROOFPILOT_API_CORS_ORIGINS=http://127.0.0.1:3011`, the browser rendered `API healthy` from the frontend on port `3011`, and live POST preflight allowed origin `3011` while omitting an allow-origin header for unconfigured port `3012`. Browser form typing could not be exercised because the local browser runtime lacked its virtual clipboard helper.
 
 ## Unresolved Risks
 
@@ -196,8 +202,7 @@ Last updated: 2026-05-24
 - Next.js build no longer emits the parent-lockfile workspace-root warning after setting `turbopack.root`. It still emits an upstream `baseline-browser-mapping` staleness warning.
 - The ignored local `.env` used in one smoke run configured `gemini-2.5-flash-lite` for primary generation; Issue #41 live verification explicitly overrode non-secret model variables to exercise the documented `gemini-3.1-flash-lite` primary and `gemini-2.5-flash-lite` Search fallback.
 - Issue #51 Redis ingestion recovery supports one active local worker; multi-worker leasing and heartbeats are deferred.
-- Live Issue #51 UI verification exposed that `PROOFPILOT_API_CORS_ORIGINS` is not wired into the API and alternate frontend ports are blocked; GitHub Issue #52 tracks the strict configurable CORS fix. Use frontend port `3000` until then.
 
 ## Next Issue
 
-- Merge Issue #51, then implement Issue #52 strict configurable CORS before adding Playwright E2E, rate limiting, and structured operational telemetry.
+- Complete Issue #52 live alternate-port browser verification and gates, merge it, then add Playwright E2E, rate limiting, and structured operational telemetry.

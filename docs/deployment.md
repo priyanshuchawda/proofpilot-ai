@@ -50,5 +50,5 @@ Deployment to hosted platforms is deferred until the free-tier contract and secr
 - GitHub Actions are intentionally deferred until final hardening.
 - Search grounding is disabled by default.
 - Use `gemini-3.1-flash-lite` for ordinary live generation with `gemini-2.5-flash-lite` configured as the temporary-overload and Search-safe fallback.
-- The API currently allows browser requests only from the frontend on port `3000`; Issue #52 tracks validated configurable CORS origins.
+- Set `PROOFPILOT_API_CORS_ORIGINS` to an explicit comma-separated local frontend allowlist when using non-default ports; wildcard origins are rejected.
 - Do not deploy with real credentials in frontend environment variables.
