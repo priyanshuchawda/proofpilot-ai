@@ -9,6 +9,7 @@ import { FileUp, FolderPlus, RefreshCw } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000";
+const terminalDocumentStatuses = new Set(["ready", "failed"]);
 
 export function WorkspacePanel({
   onSelectWorkspace,
@@ -85,6 +86,37 @@ export function WorkspacePanel({
       cancelled = true;
     };
   }, [selectedWorkspaceId]);
+
+  useEffect(() => {
+    if (
+      !selectedWorkspaceId ||
+      !documents.some((document) => !terminalDocumentStatuses.has(document.status))
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+    const intervalId = window.setInterval(() => {
+      const apiClient = createProofPilotClient({ baseUrl: apiBaseUrl });
+      void apiClient
+        .listDocuments(selectedWorkspaceId)
+        .then((loaded) => {
+          if (!cancelled) {
+            setDocuments(loaded);
+          }
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setError("Document status unavailable.");
+          }
+        });
+    }, 1000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [documents, selectedWorkspaceId]);
 
   async function createWorkspace(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -227,6 +259,11 @@ export function WorkspacePanel({
                 </span>
               </div>
               <p className="mt-2 text-sm text-[#b8c7dd]">{document.chunk_count} chunks</p>
+              {document.status === "failed" ? (
+                <p className="mt-2 text-sm text-[#fca5a5]">
+                  Processing failed. Retry with a supported public document.
+                </p>
+              ) : null}
             </article>
           ))}
         </div>

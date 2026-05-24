@@ -1,3 +1,4 @@
+from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Annotated
 
@@ -5,14 +6,12 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.ai.embeddings import build_embedding_provider
 from app.core.config import Settings, get_settings
 from app.db.models import Document
 from app.db.session import get_db_session
+from app.ingestion.queue import IngestionQueue, IngestionQueueUnavailableError, RedisIngestionQueue
 from app.ingestion.uploads import UnsupportedUploadError, UploadTooLargeError
 from app.services.documents import DocumentService
-from app.services.embedding_index import EmbeddingIndexService
-from app.vector.qdrant import QdrantCollectionConfigurationError, QdrantVectorStore
 
 router = APIRouter(tags=["documents"])
 
@@ -33,24 +32,18 @@ class DocumentStatusResponse(BaseModel):
 
 def get_document_service(
     session: Annotated[AsyncSession, Depends(get_db_session)],
-    settings: Annotated[Settings, Depends(get_settings)],
 ) -> DocumentService:
-    document_indexer = None
-    if settings.upload_indexing_enabled:
-        document_indexer = EmbeddingIndexService(
-            session=session,
-            embedding_provider=build_embedding_provider(settings),
-            vector_store=QdrantVectorStore(
-                url=settings.qdrant_url,
-                collection="proofpilot_chunks",
-            ),
-            embedding_model=(
-                settings.gemini_embedding_model
-                if settings.gemini_embeddings_enabled
-                else "deterministic-local"
-            ),
-        )
-    return DocumentService(session, Path(".data/uploads"), document_indexer=document_indexer)
+    return DocumentService(session, Path(".data/uploads"))
+
+
+async def get_ingestion_queue(
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> AsyncIterator[IngestionQueue]:
+    queue = RedisIngestionQueue(url=settings.redis_url)
+    try:
+        yield queue
+    finally:
+        await queue.close()
 
 
 async def to_document_response(
@@ -75,11 +68,12 @@ async def to_document_response(
 async def upload_document(
     workspace_id: str,
     service: Annotated[DocumentService, Depends(get_document_service)],
+    queue: Annotated[IngestionQueue, Depends(get_ingestion_queue)],
     file: Annotated[UploadFile, File(...)],
 ) -> DocumentResponse:
     content = await file.read()
     try:
-        document = await service.ingest_upload(
+        document = await service.create_upload(
             workspace_id=workspace_id,
             filename=file.filename or "document",
             content_type=file.content_type,
@@ -93,10 +87,13 @@ async def upload_document(
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail=str(exc)
         ) from exc
-    except QdrantCollectionConfigurationError as exc:
+    try:
+        await queue.enqueue(document_id=document.id)
+    except IngestionQueueUnavailableError as exc:
+        await service.mark_failed(document_id=document.id)
         raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Document cannot be indexed with the configured vector collection.",
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Document processing queue is unavailable. Try again later.",
         ) from exc
 
     return await to_document_response(document, service)

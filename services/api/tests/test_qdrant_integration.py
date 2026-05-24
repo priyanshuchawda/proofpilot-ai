@@ -9,6 +9,8 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from app.ai.embeddings import DeterministicEmbeddingProvider
 from app.db.base import Base
 from app.db.models import Workspace
+from app.ingestion.queue import RedisIngestionQueue
+from app.ingestion.worker import process_next_job
 from app.services.documents import DocumentService
 from app.services.embedding_index import EmbeddingIndexService
 from app.vector.base import VectorPoint
@@ -108,20 +110,33 @@ async def test_document_indexing_reuses_existing_qdrant_collection(tmp_path: Pat
             embedding_model="deterministic-local",
         )
         service = DocumentService(session, tmp_path, document_indexer=indexer)
-        first = await service.ingest_upload(
+        queue = RedisIngestionQueue(
+            url=os.getenv("REDIS_URL", "redis://127.0.0.1:6379/0"),
+            queue_key=f"proofpilot:test:worker:{uuid4().hex}",
+        )
+        first = await service.create_upload(
             workspace_id=workspace.id,
             filename="one.md",
             content_type="text/markdown",
             content=b"# One\nPublic evidence one.",
         )
-        second = await service.ingest_upload(
+        second = await service.create_upload(
             workspace_id=workspace.id,
             filename="two.md",
             content_type="text/markdown",
             content=b"# Two\nPublic evidence two.",
         )
+        try:
+            await queue.enqueue(document_id=first.id)
+            await queue.enqueue(document_id=second.id)
+            assert await process_next_job(queue=queue, processor=service, timeout_seconds=1)
+            assert await process_next_job(queue=queue, processor=service, timeout_seconds=1)
+        finally:
+            await queue.close()
+        first = await service.get_document(document_id=first.id)
+        second = await service.get_document(document_id=second.id)
 
     await engine.dispose()
 
-    assert first.status == "ready"
-    assert second.status == "ready"
+    assert first is not None and first.status == "ready"
+    assert second is not None and second.status == "ready"

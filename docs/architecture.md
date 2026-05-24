@@ -6,7 +6,7 @@ ProofPilot AI is a monorepo with a TypeScript frontend, Python AI backend, and l
 
 - `apps/web`: Next.js App Router UI.
 - `services/api`: FastAPI API, retrieval orchestration, Gemini provider boundary, evaluation APIs.
-- `services/worker`: planned background ingestion and indexing worker.
+- `services/worker`: worker runbook; the MVP executable is shared from `services/api/app/ingestion/worker.py`.
 - `packages/generated-api-client`: generated TypeScript client from FastAPI OpenAPI.
 - `infra/docker-compose.yml`: local PostgreSQL, Redis, and Qdrant.
 - PostgreSQL maps to host port `55432` so the project does not collide with a personal database on `5432`.
@@ -35,11 +35,11 @@ SQLAlchemy async models define the MVP data surface, including workspaces, docum
 
 ## Ingestion
 
-The MVP ingestion path validates PDF/TXT/Markdown uploads, stores originals through a local storage interface, extracts text with page metadata where available, redacts common secrets, chunks text with page/heading metadata, and persists document status plus chunks.
+The MVP ingestion path validates PDF/TXT/Markdown uploads and stores originals through a local storage interface in the HTTP request. It then places the document ID on a local Redis pending queue and returns `uploaded`. The Python worker reserves a job into an in-flight list, extracts text with page metadata where available, redacts common secrets, chunks and indexes evidence, advances persisted statuses through `parsed`, `chunked`, `embedded`, `indexed`, and `ready`, and acknowledges terminal processing. Startup recovers unacknowledged in-flight items; this local recovery contract assumes one worker process. Failed processing records a non-sensitive `failed` status that the UI surfaces.
 
 ## Vector Indexing
 
-Issue #9 adds an embedding/vector boundary with deterministic local embeddings for standard tests and Qdrant indexing behind a typed adapter. The indexing service persists `embedding_record` rows, upserts Qdrant points with chunk payloads, skips already-indexed `(chunk_id, content_hash, model)` records, and embeds queries before vector search. Issue #37 adds an opt-in Gemini embedding provider using `gemini-embedding-2`; deterministic local embeddings remain the default for tests and local zero-key operation. Issue #39 wires document upload to the indexing boundary after chunk persistence, with the same service protocol available for a later worker handoff. Issue #46 makes Qdrant collection setup idempotent for compatible existing vector dimensions and distance metrics and reports an incompatible configuration as a non-sensitive upload conflict instead of an opaque server failure.
+Issue #9 adds an embedding/vector boundary with deterministic local embeddings for standard tests and Qdrant indexing behind a typed adapter. The indexing service persists `embedding_record` rows, upserts Qdrant points with chunk payloads, skips already-indexed `(chunk_id, content_hash, model)` records, and embeds queries before vector search. Issue #37 adds an opt-in Gemini embedding provider using `gemini-embedding-2`; deterministic local embeddings remain the default for tests and local zero-key operation. Issue #39 wires document processing to the indexing boundary after chunk persistence. Issue #46 makes Qdrant collection setup idempotent for compatible existing vector dimensions and distance metrics. Issue #51 moves processing/indexing behind the queued worker; incompatible vector configuration now produces the worker's safe `failed` ingestion status instead of failing an upload request.
 
 ## Hybrid Retrieval
 

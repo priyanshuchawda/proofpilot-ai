@@ -11,8 +11,12 @@ flowchart LR
   User["User"] --> Web["Next.js App Router UI"]
   Web --> API["FastAPI backend"]
   API --> Postgres["PostgreSQL metadata and trace tables"]
-  API --> Redis["Redis response cache"]
-  API --> Qdrant["Qdrant vector search"]
+  API --> Redis["Redis cache and ingestion queue"]
+  Redis --> Worker["Python ingestion worker"]
+  Worker --> Postgres
+  Worker --> Qdrant["Qdrant vector search"]
+  Worker --> Gemini["Gemini Developer API"]
+  API --> Qdrant
   API --> Gemini["Gemini Developer API"]
   API --> Evals["Local evaluation results"]
 ```
@@ -23,10 +27,11 @@ Gemini API access is backend-only. The frontend never receives `GEMINI_API_KEY`.
 
 - Workspace-scoped document ingestion for PDF, TXT, and Markdown.
 - Dashboard workspace creation/selection and document upload/listing UI backed by real API routes.
+- Redis-queued asynchronous ingestion with visible uploaded-to-ready progress, failure feedback, and single-worker recovery.
 - Secret redaction before model-bound context.
 - Deterministic local embeddings by default, with opt-in Gemini embeddings for local live testing.
 - Qdrant vector indexing boundary.
-- Upload-time document indexing into Qdrant through the embedding service boundary.
+- Background document indexing into Qdrant through the embedding service boundary.
 - Hybrid retrieval with Qdrant dense candidates plus PostgreSQL full-text ranking and Reciprocal Rank Fusion.
 - Structured cited answers with citation ID validation.
 - Streamed query transport with answer deltas and final citation metadata.
@@ -83,6 +88,13 @@ cd services/api
 uv run uvicorn app.main:app --reload
 ```
 
+Run the ingestion worker in a separate terminal:
+
+```powershell
+cd services/api
+uv run python -m app.ingestion.worker
+```
+
 Run the frontend:
 
 ```powershell
@@ -91,7 +103,7 @@ pnpm --filter @proofpilot/web dev
 
 Open `http://localhost:3000`.
 
-If another local project already owns port `8000`, run ProofPilot on another port and set `NEXT_PUBLIC_API_BASE_URL` before starting the frontend, for example `http://127.0.0.1:8010`.
+If another local project already owns backend port `8000`, run the ProofPilot API on another port and set `NEXT_PUBLIC_API_BASE_URL` before starting the frontend, for example `http://127.0.0.1:8010`. Until Issue #52 is complete, run the frontend itself on port `3000` because the API currently permits that browser origin only.
 
 ## Environment Variables
 
@@ -191,7 +203,7 @@ These are not human-reviewed answer-quality scores.
 
 ## Demo Walkthrough
 
-1. Start Docker, backend, and frontend.
+1. Start Docker, backend, ingestion worker, and frontend.
 2. Confirm free-tier mode and privacy warning.
 3. Create or select a workspace in the dashboard.
 4. Upload public demo documents.
@@ -206,12 +218,13 @@ These are not human-reviewed answer-quality scores.
 - Search grounding is disabled by default and not live-smoked automatically; provider quota or temporary overload returns a retryable refusal rather than a paid fallback.
 - Provider-native token streaming is not yet implemented; the stream currently emits deltas from the finalized cited answer payload.
 - Deterministic local embeddings are the default; real Gemini embeddings are opt-in with `GEMINI_EMBEDDINGS_ENABLED=true`.
+- Redis ingestion recovery currently supports one local worker process; distributed leases and worker scaling are deferred.
+- Configurable browser CORS origins are tracked in Issue #52; until it is fixed, local browser UI operation uses frontend port `3000`.
 - Evaluation outcomes are deterministic harness results, not human quality review.
 - GitHub Actions are intentionally deferred until final hardening to avoid spending Actions minutes early.
 
 ## Roadmap
 
-- Move upload-time indexing into a separate background worker.
 - Add provider-native Gemini token streaming behind the existing stream transport.
 - Add richer trace drawer and document management UI.
 - Harden live Search evaluation cases and source-history inspection.

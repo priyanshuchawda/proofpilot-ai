@@ -26,6 +26,17 @@ cd services/api
 uv run alembic upgrade head
 ```
 
+## Ingestion Worker
+
+Run one local worker from the backend directory in a separate terminal:
+
+```powershell
+cd services/api
+uv run python -m app.ingestion.worker
+```
+
+The worker uses Redis to reserve uploaded documents, persists ingestion progress, and recovers unacknowledged work on restart. The local MVP supports one active worker process.
+
 ## Frontend
 
 ```powershell
@@ -38,5 +49,6 @@ Deployment to hosted platforms is deferred until the free-tier contract and secr
 
 - GitHub Actions are intentionally deferred until final hardening.
 - Search grounding is disabled by default.
-- Use `gemini-2.5-flash-lite` for current live testing.
+- Use `gemini-3.1-flash-lite` for ordinary live generation with `gemini-2.5-flash-lite` configured as the temporary-overload and Search-safe fallback.
+- The API currently allows browser requests only from the frontend on port `3000`; Issue #52 tracks validated configurable CORS origins.
 - Do not deploy with real credentials in frontend environment variables.
