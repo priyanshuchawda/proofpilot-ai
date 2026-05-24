@@ -13,6 +13,7 @@ from app.db.models import (
     RetrievalCandidate,
     Workspace,
 )
+from app.retrieval.keyword import DeterministicKeywordRetriever
 from app.services.embedding_index import EmbeddingIndexService
 from app.services.retrieval import HybridRetrievalService
 from app.vector.base import VectorPoint, VectorStore
@@ -131,6 +132,7 @@ async def test_hybrid_retrieval_fuses_dense_and_keyword_candidates_and_stores_tr
         retrieval_service = HybridRetrievalService(
             session=session,
             embedding_service=embedding_service,
+            keyword_retriever=DeterministicKeywordRetriever(session=session),
         )
 
         result = await retrieval_service.retrieve(
@@ -190,6 +192,7 @@ async def test_hybrid_retrieval_returns_empty_evidence_and_query_run_when_no_mat
         retrieval_service = HybridRetrievalService(
             session=session,
             embedding_service=embedding_service,
+            keyword_retriever=DeterministicKeywordRetriever(session=session),
         )
 
         result = await retrieval_service.retrieve(
@@ -238,6 +241,7 @@ async def test_hybrid_retrieval_falls_back_to_keyword_when_dense_search_fails() 
         retrieval_service = HybridRetrievalService(
             session=session,
             embedding_service=embedding_service,
+            keyword_retriever=DeterministicKeywordRetriever(session=session),
         )
 
         result = await retrieval_service.retrieve(

@@ -12,6 +12,7 @@ from app.ai.gemini import build_gemini_provider, choose_search_grounding_model
 from app.answers.schemas import AnswerResponse
 from app.core.config import Settings, get_settings
 from app.db.session import get_db_session
+from app.retrieval.keyword import PostgresKeywordRetriever
 from app.services.answers import AnswerService
 from app.services.embedding_index import EmbeddingIndexService
 from app.services.query import QueryService
@@ -46,6 +47,7 @@ def get_query_service(
     retrieval_service = HybridRetrievalService(
         session=session,
         embedding_service=embedding_service,
+        keyword_retriever=PostgresKeywordRetriever(session=session),
     )
     answer_service = AnswerService(
         session=session,

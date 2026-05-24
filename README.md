@@ -27,7 +27,7 @@ Gemini API access is backend-only. The frontend never receives `GEMINI_API_KEY`.
 - Deterministic local embeddings by default, with opt-in Gemini embeddings for local live testing.
 - Qdrant vector indexing boundary.
 - Upload-time document indexing into Qdrant through the embedding service boundary.
-- Hybrid retrieval with dense IDs plus keyword scoring and Reciprocal Rank Fusion.
+- Hybrid retrieval with Qdrant dense candidates plus PostgreSQL full-text ranking and Reciprocal Rank Fusion.
 - Structured cited answers with citation ID validation.
 - Streamed query transport with answer deltas and final citation metadata.
 - Safe refusal when evidence is missing or citations are fabricated.
@@ -206,7 +206,6 @@ These are not human-reviewed answer-quality scores.
 - Search grounding is disabled by default and not live-smoked automatically; provider quota or temporary overload returns a retryable refusal rather than a paid fallback.
 - Provider-native token streaming is not yet implemented; the stream currently emits deltas from the finalized cited answer payload.
 - Deterministic local embeddings are the default; real Gemini embeddings are opt-in with `GEMINI_EMBEDDINGS_ENABLED=true`.
-- Keyword retrieval currently uses deterministic exact term overlap rather than optimized PostgreSQL full-text ranking.
 - Evaluation outcomes are deterministic harness results, not human quality review.
 - GitHub Actions are intentionally deferred until final hardening to avoid spending Actions minutes early.
 

@@ -37,7 +37,7 @@ Document ingestion persists redacted chunks and metadata, then indexes ready chu
 ## Hybrid Evidence Ranking
 
 - Dense retrieval returns ordered chunk IDs from Qdrant and is filtered by workspace before evidence is exposed.
-- Keyword retrieval scores workspace chunks by normalized exact term overlap. This is deterministic and testable; PostgreSQL-specific full-text optimization can replace the internal scorer without changing the service contract.
+- Production keyword retrieval runs workspace-scoped PostgreSQL `websearch_to_tsquery`/`ts_rank_cd` ranking over a GIN-indexed text vector of section headings and chunk text. Unit tests inject a deterministic exact-term retriever through the same protocol so they do not require PostgreSQL.
 - Reciprocal Rank Fusion combines dense and keyword rankings. Chunks supported by both sources are marked `hybrid`.
 - Retrieval stores a `query_run` and final ranked `retrieval_candidate` rows so the UI can later inspect the trace.
 - Empty retrieval still stores the query run and returns no evidence, allowing later answer generation to choose a safe refusal.
