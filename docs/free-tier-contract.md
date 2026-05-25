@@ -50,6 +50,7 @@ All model IDs are configuration values, not hard-coded architecture assumptions.
 - Context caching is not used in the MVP. Some pricing rows mark it unavailable on free tier for selected models.
 - Google Maps grounding, computer use, custom tools endpoints, Vertex AI, and paid tiers are disabled.
 - Real Gemini smoke tests are manual only and guarded by `RUN_GEMINI_SMOKE=1`.
+- Real cited-answer generation smoke tests are manual only and guarded by `RUN_GEMINI_ANSWER_SMOKE=1`.
 - Real Gemini embedding calls are disabled by default for deterministic local testing. When `GEMINI_EMBEDDINGS_ENABLED=true` and `GEMINI_API_KEY` is present, the backend uses the official `google-genai` SDK with `gemini-embedding-2`; otherwise it falls back to deterministic local embeddings without exposing secrets.
 - Google Search grounding remains disabled by default even though Gemini 2.5 Flash-Lite is documented as free-tier-safe up to quota. Freshness-required questions refuse clearly unless `GEMINI_SEARCH_GROUNDING_ENABLED=true` is deliberately set.
 - When Search grounding is deliberately enabled, accepted responses must carry `groundingChunks`, `groundingSupports`, and `searchEntryPoint.renderedContent`. ProofPilot maps these to inline `[web-n]` labels, distinct live-web sources, and an isolated Search Suggestions display; missing required metadata results in refusal.
@@ -71,6 +72,7 @@ All model IDs are configuration values, not hard-coded architecture assumptions.
 - 2026-05-24: Manual opt-in Search grounding smoke passed with `RUN_GEMINI_SEARCH_SMOKE=1` using the configured free-tier-safe fallback model.
 - 2026-05-24: A later opt-in Search retry returned HTTP `503 UNAVAILABLE` due to temporary model demand; this is a provider-availability condition rather than an API-key authentication failure and is covered by the graceful-degradation path.
 - 2026-05-24: Issue #41 live endpoint smoke with `gemini-3.1-flash-lite` configured for ordinary generation and `gemini-2.5-flash-lite` selected for Search returned a grounded, web-only freshness answer with 7 live sources, inline source labels, and required Search Suggestions metadata.
+- 2026-05-25: Manual opt-in cited-answer smoke passed with `RUN_GEMINI_ANSWER_SMOKE=1` using `gemini-2.5-flash-lite` against public synthetic evidence.
 - Standard tests remain mocked or skipped and do not require `GEMINI_API_KEY`.
 
 ## Privacy Contract

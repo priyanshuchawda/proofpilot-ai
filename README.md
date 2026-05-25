@@ -215,6 +215,8 @@ Manual Gemini smoke:
 cd services/api
 $env:RUN_GEMINI_SMOKE='1'
 uv run pytest tests/test_gemini_smoke.py -q
+$env:RUN_GEMINI_ANSWER_SMOKE='1'
+uv run pytest tests/test_gemini_answer_smoke.py -q
 $env:RUN_GEMINI_EMBEDDING_SMOKE='1'
 uv run pytest tests/test_gemini_embedding_smoke.py -q
 $env:RUN_GEMINI_SEARCH_SMOKE='1'
