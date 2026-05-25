@@ -42,6 +42,7 @@ Gemini API access is backend-only. The frontend never receives `GEMINI_API_KEY`.
 - Deterministic contradiction detection for simple numeric claims.
 - Workspace/index-version scoped response caching.
 - Local latency metrics.
+- Trace-safe JSON request logs with `X-Request-ID`, route, status, duration, rate-limit outcome, and safe query-run correlation metadata when available.
 - Evaluation dashboard with deterministic metrics.
 - Generated TypeScript API client with OpenAPI drift check.
 - Live API health and Gemini settings cards for local demo readiness.
@@ -127,6 +128,8 @@ Search grounding remains disabled by default. When enabled, ProofPilot uses a fr
 Ordinary document answers use `GEMINI_GENERATION_MODEL` first and retry one temporary provider overload through `GEMINI_LIGHTWEIGHT_MODEL`. Quota exhaustion is surfaced without retry, and the answer trace displays the model that actually succeeded.
 
 Sensitive POST routes for uploads, document queries, streamed queries, and evaluation runs use Redis-backed fixed-window rate limits. Exceeded budgets return HTTP `429` with `Retry-After`; limiter backend failures fail closed with a safe retry response. Disable rate limiting only for controlled local tests.
+
+Every API response includes `X-Request-ID`. The backend emits one structured JSON request log per request with method, path without query string, status, duration, request ID, and whether the response was rate-limited. Query endpoints also attach safe correlation fields such as query run ID, cache status, effective generation model, and live-grounding usage. Request bodies, uploaded document text, authorization headers, query strings, and API keys are not logged.
 
 For an explicit local current-information test, set `GEMINI_SEARCH_GROUNDING_ENABLED=true` in the ignored `.env` before starting the backend. The grounded response shows live-web source cards and Google's required Search Suggestions content; it never uses a paid fallback route.
 

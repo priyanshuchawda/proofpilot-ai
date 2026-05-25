@@ -29,6 +29,7 @@ ProofPilot AI is a monorepo with a TypeScript frontend, Python AI backend, and l
 - Frontend API helpers are generated from the FastAPI OpenAPI schema and checked with `pnpm api:check`.
 - Playwright browser coverage exercises the upload-to-cited-answer UI contract against deterministic versioned API/SSE fixtures; infrastructure and Gemini paths retain separate verification.
 - Sensitive POST routes use a Redis-backed fixed-window rate limiter keyed by hashed backend-observed client identifiers. Authenticated principal scoping is deferred to the auth/workspace ownership issue.
+- API responses carry `X-Request-ID`, and local structured request logs contain only safe metadata: method, path without query string, status, duration, request ID, rate-limit outcome, and safe query-run correlation fields when available.
 - No real Gemini calls run in automated CI.
 
 ## Persistence
@@ -58,6 +59,8 @@ Issue #15 adds deterministic routing metadata for Fast Mode, Verified Mode, no-e
 ## Caching And Metrics
 
 Issue #19 adds workspace-scoped response cache keys that include index version, mode, and normalized query hash. Safe response caching is disabled for refusals, live-grounded answers, and freshness-required routes. Query execution persists local latency metrics for retrieval, answer generation, and total query time without storing document text in metric names.
+
+Issue #58 adds request-scoped JSON logging through middleware. The middleware propagates valid `X-Request-ID` values or generates one, exposes the header to browsers, and logs only trace-safe fields. Query handlers attach safe answer metadata to the request state so logs can correlate client-visible failures or slow responses with `query_run_id`, cache status, effective generation model, and live-grounding usage. It intentionally excludes request bodies, uploaded document text, raw headers, query strings, and secrets.
 
 ## Abuse Controls
 

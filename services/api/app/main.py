@@ -10,6 +10,7 @@ from app.api.query_runs import router as query_runs_router
 from app.api.settings import router as settings_router
 from app.api.workspaces import router as workspaces_router
 from app.core.config import Settings, get_settings
+from app.observability.request_logging import RequestLogMiddleware
 
 
 class HealthResponse(BaseModel):
@@ -36,7 +37,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_credentials=False,
         allow_methods=["GET", "POST"],
         allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
+        expose_headers=["Retry-After", "X-Request-ID"],
     )
+    application.add_middleware(RequestLogMiddleware)
     application.include_router(settings_router)
     application.include_router(health_router)
     application.include_router(workspaces_router)
