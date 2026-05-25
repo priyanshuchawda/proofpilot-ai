@@ -11,6 +11,7 @@ from app.db.models import Document
 from app.db.session import get_db_session
 from app.ingestion.queue import IngestionQueue, IngestionQueueUnavailableError, RedisIngestionQueue
 from app.ingestion.uploads import UnsupportedUploadError, UploadTooLargeError
+from app.security.rate_limiting import enforce_sensitive_rate_limit
 from app.services.documents import DocumentService
 
 router = APIRouter(tags=["documents"])
@@ -67,10 +68,12 @@ async def to_document_response(
 )
 async def upload_document(
     workspace_id: str,
+    _rate_limit: Annotated[None, Depends(enforce_sensitive_rate_limit)],
     service: Annotated[DocumentService, Depends(get_document_service)],
     queue: Annotated[IngestionQueue, Depends(get_ingestion_queue)],
     file: Annotated[UploadFile, File(...)],
 ) -> DocumentResponse:
+    del _rate_limit
     content = await file.read()
     try:
         document = await service.create_upload(

@@ -7,6 +7,7 @@
 - Frontend code must never import Gemini SDKs or receive API keys.
 - `.env`, `.env.local`, credentials, and generated secret files are ignored by Git.
 - Local development reads `.env` from the repository root. Do not place keys in frontend files or `NEXT_PUBLIC_*` variables.
+- Uploads, model-backed queries, streamed queries, and evaluation runs are protected by Redis-backed rate limits. Redis keys store a hash of the backend-observed caller identifier rather than raw IP addresses or tokens.
 
 ## Data Handling
 

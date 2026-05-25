@@ -51,4 +51,5 @@ Deployment to hosted platforms is deferred until the free-tier contract and secr
 - Search grounding is disabled by default.
 - Use `gemini-3.1-flash-lite` for ordinary live generation with `gemini-2.5-flash-lite` configured as the temporary-overload and Search-safe fallback.
 - Set `PROOFPILOT_API_CORS_ORIGINS` to an explicit comma-separated local frontend allowlist when using non-default ports; wildcard origins are rejected.
+- Keep `PROOFPILOT_RATE_LIMITING_ENABLED=true` outside controlled local tests. Protected expensive routes fail closed when Redis is unavailable.
 - Do not deploy with real credentials in frontend environment variables.

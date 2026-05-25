@@ -13,6 +13,7 @@ from app.answers.schemas import AnswerResponse
 from app.core.config import Settings, get_settings
 from app.db.session import get_db_session
 from app.retrieval.keyword import PostgresKeywordRetriever
+from app.security.rate_limiting import enforce_sensitive_rate_limit
 from app.services.answers import AnswerService
 from app.services.embedding_index import EmbeddingIndexService
 from app.services.query import QueryService
@@ -71,8 +72,10 @@ def get_query_service(
 async def query_workspace(
     workspace_id: str,
     request: QueryRequest,
+    _rate_limit: Annotated[None, Depends(enforce_sensitive_rate_limit)],
     service: Annotated[QueryService, Depends(get_query_service)],
 ) -> AnswerResponse:
+    del _rate_limit
     return await service.answer_workspace_query(
         workspace_id=workspace_id,
         query=request.query,
@@ -84,8 +87,10 @@ async def query_workspace(
 async def query_workspace_stream(
     workspace_id: str,
     request: QueryRequest,
+    _rate_limit: Annotated[None, Depends(enforce_sensitive_rate_limit)],
     service: Annotated[QueryService, Depends(get_query_service)],
 ) -> StreamingResponse:
+    del _rate_limit
     answer = await service.answer_workspace_query(
         workspace_id=workspace_id,
         query=request.query,

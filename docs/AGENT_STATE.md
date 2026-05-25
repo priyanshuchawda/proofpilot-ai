@@ -1,6 +1,6 @@
 # Agent State
 
-Last updated: 2026-05-24
+Last updated: 2026-05-25
 
 ## Completed Issues
 
@@ -27,10 +27,11 @@ Last updated: 2026-05-24
 - #49: Implement PostgreSQL full-text keyword retrieval.
 - #51: Implement queued asynchronous document ingestion worker.
 - #52: Fix configurable strict CORS origins for local frontend ports.
+- #55: Add deterministic Playwright coverage for the cited-answer user flow.
 
 ## Current Issue
 
-- #55: Add deterministic Playwright coverage for the cited-answer user flow. Implementation is in progress on `feat/55-playwright-critical-flow`.
+- #57: Add Redis-backed rate limits for sensitive API actions. Implementation is in progress on `feat/57-sensitive-rate-limits`.
 
 ## Current Architecture Decisions
 
@@ -45,6 +46,7 @@ Last updated: 2026-05-24
 - Uploaded documents return `uploaded` after validated local storage and Redis enqueue. A local Python worker uses the existing `DocumentIndexer` boundary to parse, redact, chunk, embed, and index documents while persisting lifecycle status.
 - Redis ingestion jobs use pending and in-flight lists. The worker acknowledges terminal processing and requeues unacknowledged work at startup; the recovery contract supports one local worker process and resumes already committed chunk stages safely.
 - Browser CORS uses a validated explicit-origin allowlist from `PROOFPILOT_API_CORS_ORIGINS`; wildcard origins and URL values containing credentials or non-origin components are rejected.
+- Sensitive POST routes use a Redis-backed fixed-window rate limiter keyed by hashed backend-observed caller identifiers. Uploads, query JSON/SSE, and evaluation execution return `429` with `Retry-After` on exhaustion and safe `503` when the limiter backend is unavailable.
 - Qdrant collection setup is idempotent when the stored vector dimension and distance metric match the active embedding and search contract. Under asynchronous processing, incompatible configuration is recorded as a non-sensitive failed ingestion status.
 - Hybrid retrieval uses deterministic Reciprocal Rank Fusion over dense Qdrant IDs and workspace-scoped PostgreSQL full-text candidates, with trace rows persisted for inspection. SQLite unit tests inject deterministic keyword scoring behind the same typed retriever boundary.
 - Cited answer generation validates generated citation IDs against retrieved evidence and refuses when evidence is missing or citations are fabricated.
@@ -193,12 +195,17 @@ Last updated: 2026-05-24
 - Issue #55 focused GREEN check: `pnpm e2e` passed with one Chromium test covering public upload status, Verified Mode cited answer rendering, and retrieval trace display; production-mode server startup left tracked Next.js generated types unchanged.
 - Issue #55 runner isolation check: the first full frontend run failed because Vitest collected the Playwright spec; restricting Vitest discovery to `app/**/*.test.{ts,tsx}` separated component tests from browser specifications.
 - Issue #55 standard local gates: backend format, lint, Pyright, and `uv run pytest -q` passed with 85 tests and 13 opt-in skips; frontend API drift check, lint, typecheck, `pnpm test` passed with 19 tests, `pnpm build` passed with compiled-style verification, and `pnpm e2e` passed with 1 browser test while leaving generated types clean.
+- Issue #57 RED check: `uv run pytest tests/test_rate_limiting.py tests/test_rate_limiting_integration.py -q` failed because `app.security.rate_limiting` did not exist.
+- Issue #57 focused GREEN checks: changed-file Ruff/Pyright passed; `uv run pytest tests/test_query_api.py tests/test_document_api.py tests/test_evaluation_api.py tests/test_rate_limiting.py tests/test_rate_limiting_integration.py -q` passed with 13 tests and 1 skipped.
+- Issue #57 Docker Redis verification: `RUN_INFRA_INTEGRATION=1 uv run pytest tests/test_rate_limiting_integration.py -q` passed with 1 test.
+- Issue #57 standard local gates: backend format, lint, Pyright, and `uv run pytest -q` passed with 93 tests and 14 opt-in skips; generated API drift check passed; Docker Compose validation, whitespace checks, and tracked secret-pattern scan passed.
 
 ## Unresolved Risks
 
 - GitHub Actions are intentionally disabled for now to avoid spending Actions minutes before final hardening.
 - File Search pricing details must be rechecked before managed File Search integration code is added.
 - Standard Playwright coverage uses deterministic browser-intercepted API fixtures; a fully automated Docker-backed browser flow with the worker and opt-in Gemini provider remains future hardening.
+- Rate limiting currently identifies unauthenticated callers by backend-observed client network address; authenticated principal/session scoping is tracked in Issue #60.
 - Local PostgreSQL uses host port `55432` to avoid a personal Postgres conflict on `5432`.
 - Provider-native Gemini token streaming remains a later enhancement. The current stream transport emits deltas from the finalized cited answer text.
 - Local `.env` may point `DATABASE_URL` at `localhost:5432`; Docker Compose PostgreSQL is exposed on `127.0.0.1:55432`, so local smoke commands should override `DATABASE_URL` or update the ignored `.env` value.
@@ -211,4 +218,4 @@ Last updated: 2026-05-24
 
 ## Next Issue
 
-- Complete Issue #55 local gates and merge it, then implement rate limiting and structured operational telemetry.
+- Complete Issue #57 local gates and merge it, then implement structured request telemetry in Issue #58.
