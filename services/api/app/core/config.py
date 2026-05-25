@@ -17,9 +17,9 @@ class Settings(BaseSettings):
     qdrant_collection: str = "proofpilot_chunks"
     gemini_api_key: str | None = None
     gemini_provider_mode: str = "auto"
-    gemini_generation_model: str = "gemini-3.1-flash-lite"
+    gemini_generation_model: str = "gemini-2.5-flash-lite"
     gemini_lightweight_model: str = "gemini-2.5-flash-lite"
-    gemini_fresh_model: str = "gemini-3.1-flash-lite"
+    gemini_fresh_model: str = "gemini-2.5-flash-lite"
     gemini_search_grounding_fallback_model: str = "gemini-2.5-flash-lite"
     gemini_embedding_model: str = "gemini-embedding-2"
     gemini_embedding_dimension: int = 768

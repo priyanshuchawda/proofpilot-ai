@@ -15,9 +15,9 @@ test("renders backend Gemini model and embedding settings", async () => {
       json: async () => ({
         backend_only: true,
         gemini_configured: true,
-        generation_model: "gemini-3.1-flash-lite",
+        generation_model: "gemini-2.5-flash-lite",
         lightweight_model: "gemini-2.5-flash-lite",
-        freshness_model: "gemini-3.1-flash-lite",
+        freshness_model: "gemini-2.5-flash-lite",
         search_grounding_model: "gemini-2.5-flash-lite",
         embedding_model: "gemini-embedding-2",
         embedding_dimension: 768,
@@ -32,7 +32,7 @@ test("renders backend Gemini model and embedding settings", async () => {
 
   expect(screen.getByText("Loading Gemini settings")).toBeVisible();
   await waitFor(() => {
-    expect(screen.getByText("gemini-3.1-flash-lite primary")).toBeVisible();
+    expect(screen.getByText("gemini-2.5-flash-lite primary")).toBeVisible();
   });
   expect(screen.getByText("Search via gemini-2.5-flash-lite")).toBeVisible();
   expect(screen.getByText("Gemini embeddings enabled")).toBeVisible();

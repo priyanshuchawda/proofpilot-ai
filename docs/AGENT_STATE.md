@@ -38,7 +38,7 @@ Last updated: 2026-05-25
 
 ## Current Issue
 
-- #71: Add operational metrics dashboard panel. Implementation is in progress on `feat/71-operational-metrics-panel`.
+- #73: Align development model defaults to Gemini 2.5 Flash-Lite. Implementation is in progress on `feat/73-gemini-25-dev-defaults`.
 
 ## Current Architecture Decisions
 
@@ -47,7 +47,7 @@ Last updated: 2026-05-25
 - Use local Docker infrastructure for PostgreSQL, Redis, and Qdrant.
 - Prefer custom RAG over provider-managed File Search for the MVP so retrieval architecture is visible and testable.
 - Treat Gemini model IDs and Google Search grounding as configuration. Search grounding is disabled by default until the selected model is verified as free-tier-safe.
-- Current provider defaults prefer `gemini-3.1-flash-lite` for non-search generation, retry temporary non-Search overload once through `gemini-2.5-flash-lite`, and use `gemini-2.5-flash-lite` as the separately selected free-tier-safe Search-grounding fallback.
+- Current provider defaults use `gemini-2.5-flash-lite` for non-search generation, temporary-overload fallback, freshness, and the separately selected free-tier-safe Search-grounding fallback. Higher-quality model review is deferred to final production hardening.
 - Keep real Gemini smoke tests manual only behind `RUN_GEMINI_SMOKE=1`.
 - `GEMINI_PROVIDER_MODE=mock` forces deterministic zero-cost generation even when an ignored local `.env` contains a real key; the full-stack smoke uses this by default.
 - Workspaces store `owner_session_id`. `X-ProofPilot-Session` is the local identity boundary, and `PROOFPILOT_WORKSPACE_OWNERSHIP_ENABLED=true` enables cross-session workspace/document/query/trace isolation without a paid auth provider.
@@ -238,6 +238,9 @@ Last updated: 2026-05-25
 - Issue #71 RED check: `pnpm --filter @proofpilot/web test -- app/operational-metrics-panel.test.tsx` failed because the operational metrics panel did not exist.
 - Issue #71 focused GREEN check: `pnpm --filter @proofpilot/web test -- app/operational-metrics-panel.test.tsx app/page.test.tsx` passed with 3 tests.
 - Issue #71 standard local gates: frontend lint, typecheck, `pnpm test` passed with 22 tests, `pnpm build` passed, deterministic `pnpm e2e` passed with 1 test and 1 opt-in full-stack smoke skip, whitespace check passed, and tracked secret-pattern scan passed.
+- Issue #73 RED check: `uv run pytest tests/test_ai_settings.py -q` failed because settings defaults still used `gemini-3.1-flash-lite`.
+- Issue #73 focused GREEN checks: `uv run pytest tests/test_ai_settings.py tests/test_gemini_provider.py tests/test_gemini_smoke.py -q` passed with 17 tests and 1 opt-in skip; `pnpm --filter @proofpilot/web test -- app/ai-settings-card.test.tsx app/page.test.tsx` passed with 3 tests.
+- Issue #73 standard local gates: backend format, lint, Pyright, and `uv run pytest -q` passed with 115 tests and 14 opt-in skips; generated API drift check passed; frontend lint, typecheck, `pnpm test` passed with 22 tests, `pnpm build` passed, deterministic `pnpm e2e` passed with 1 test and 1 opt-in full-stack smoke skip, Docker Compose validation passed, whitespace check passed, and tracked secret-pattern scan passed.
 
 ## Unresolved Risks
 
@@ -252,9 +255,9 @@ Last updated: 2026-05-25
 - Search grounding remains disabled by default. A prior opt-in Search smoke succeeded; a subsequent opt-in call returned provider HTTP `503` under temporary high demand, which Issue #41 now maps to a safe retry route.
 - Issue #19 cache-hit latency metrics are not persisted because cache hits do not create a query run yet. Cache miss query runs persist retrieval, answer, and total latency metrics.
 - Next.js build no longer emits the parent-lockfile workspace-root warning after setting `turbopack.root`. It still emits an upstream `baseline-browser-mapping` staleness warning.
-- The ignored local `.env` used in one smoke run configured `gemini-2.5-flash-lite` for primary generation; Issue #41 live verification explicitly overrode non-secret model variables to exercise the documented `gemini-3.1-flash-lite` primary and `gemini-2.5-flash-lite` Search fallback.
+- Historical smoke runs exercised a configured `gemini-3.1-flash-lite` primary, but current development defaults are intentionally aligned to `gemini-2.5-flash-lite` only until final production model review.
 - Issue #51 Redis ingestion recovery supports one active local worker; multi-worker leasing and heartbeats are deferred.
 
 ## Next Issue
 
-- Complete Issue #71 local gates and merge it, then continue hardening remaining live-testing and production-readiness gaps.
+- Complete Issue #73 local gates and merge it, then continue hardening remaining live-testing and production-readiness gaps.

@@ -51,7 +51,7 @@ Deployment to hosted platforms is deferred until the free-tier contract and secr
 - GitHub Actions are intentionally deferred until final hardening.
 - Search grounding is disabled by default.
 - `GEMINI_PROVIDER_MODE=auto` uses the mock provider only when no backend key is configured in development. Use `GEMINI_PROVIDER_MODE=mock` for zero-cost deterministic smoke tests and `GEMINI_PROVIDER_MODE=google` only for intentional live-provider checks.
-- Use `gemini-3.1-flash-lite` for ordinary live generation with `gemini-2.5-flash-lite` configured as the temporary-overload and Search-safe fallback.
+- Current local development uses `gemini-2.5-flash-lite` for ordinary live generation, temporary-overload fallback, freshness, and Search-safe fallback. Review higher-quality model choices only during final production hardening.
 - Set `PROOFPILOT_API_CORS_ORIGINS` to an explicit comma-separated local frontend allowlist when using non-default ports; wildcard origins are rejected.
 - Keep `PROOFPILOT_RATE_LIMITING_ENABLED=true` outside controlled local tests. Protected expensive routes fail closed when Redis is unavailable.
 - API responses expose `X-Request-ID`; preserve this header through any future reverse proxy so local JSON request logs can be correlated with client-visible failures.

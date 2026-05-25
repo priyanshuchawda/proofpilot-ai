@@ -25,14 +25,14 @@ The 2026-05-24 re-check was verified directly against official `ai.google.dev` p
 
 ## Selected Configuration Defaults
 
-- Development generation model: `gemini-3.1-flash-lite`
+- Development generation model: `gemini-2.5-flash-lite`
 - Development lightweight model: `gemini-2.5-flash-lite`
-- Development freshness model: `gemini-3.1-flash-lite`
+- Development freshness model: `gemini-2.5-flash-lite`
 - Search-grounding fallback model: `gemini-2.5-flash-lite`
 - Embedding model: `gemini-embedding-2`, disabled by default behind `GEMINI_EMBEDDINGS_ENABLED=false`
 - SDK: official Python `google-genai`
 
-All model IDs are configuration values, not hard-coded architecture assumptions. Normal document-answer generation may use `gemini-3.1-flash-lite` when configured and may retry one temporary HTTP `503` through configured `GEMINI_LIGHTWEIGHT_MODEL=gemini-2.5-flash-lite`. Search grounding must use a model whose official pricing table marks free-tier grounding as available; if the freshness model is not free-tier-safe for Search, the backend selects `GEMINI_SEARCH_GROUNDING_FALLBACK_MODEL`.
+All model IDs are configuration values, not hard-coded architecture assumptions. Current local development intentionally uses `gemini-2.5-flash-lite` for ordinary generation, lightweight fallback, freshness detection, and Search fallback. Later production hardening may review higher-quality configured models, but Search grounding must still use a model whose official pricing table marks free-tier grounding as available; if the freshness model is not free-tier-safe for Search, the backend selects `GEMINI_SEARCH_GROUNDING_FALLBACK_MODEL`.
 
 ## Free-Tier-Safe Capabilities
 
