@@ -301,6 +301,14 @@ class AnswerService:
                 "Answer the user question using only the supplied evidence.",
                 "Return strict JSON with keys answer_text and citation_chunk_ids.",
                 "Every factual sentence must cite at least one retrieved chunk ID.",
+                (
+                    "For each cited factual sentence, answer_text must include the exact "
+                    "bracketed chunk ID, for example [chunk-a]."
+                ),
+                (
+                    "citation_chunk_ids must contain only the exact chunk IDs used inline "
+                    "in answer_text, without brackets."
+                ),
                 "If the evidence is insufficient, return an empty answer_text and no citations.",
                 context,
                 f"Question: {query}",

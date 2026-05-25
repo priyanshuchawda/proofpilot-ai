@@ -55,6 +55,8 @@ Issue #13 adds `POST /api/v1/workspaces/{workspace_id}/query`, which orchestrate
 
 Issue #62 strengthens document answer validation with paragraph-level citation coverage. The MVP keeps provider-native Gemini streaming disabled and streams only validated final answer text over backend SSE, preserving the evidence-first contract.
 
+Issue #75 tightens the document-answer prompt to require exact inline bracketed chunk IDs in `answer_text`, matching the paragraph-level validator. It also adds an opt-in live `gemini-2.5-flash-lite` cited-answer smoke that exercises `AnswerService` against public synthetic evidence without becoming a default CI gate.
+
 ## Query Routing
 
 Issue #15 adds deterministic routing metadata for Fast Mode, Verified Mode, no-evidence results, and freshness-required questions. Verified Mode detects simple numeric contradictions across retrieved evidence and returns contradiction details in the answer contract. Issue #41 makes freshness routing precede empty-document refusal, allowing a current-information question with no uploaded source to use Google Search only when the feature flag is explicitly enabled. Search responses without sources, inline mappings, or required Search Suggestions are refused. Gemini quota exhaustion produces an explicit retry-later refusal. Temporary ordinary-generation overload may use the configured free-tier fallback once; Search remains on its separately verified Search-safe model path and no paid fallback is reachable.

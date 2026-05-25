@@ -131,6 +131,7 @@ async def test_answer_service_persists_valid_cited_answer() -> None:
     assert answer.confidence_label == "medium"
     assert answer.refusal_reason is None
     assert answer.evidence_chunk_ids == ["chunk-a"]
+    assert "answer_text must include the exact bracketed chunk ID" in provider.requests[0].prompt
     assert len(generated) == 1
     assert len(cited) == 1
     assert cited[0].chunk_id == "chunk-a"

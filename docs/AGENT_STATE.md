@@ -38,7 +38,7 @@ Last updated: 2026-05-25
 
 ## Current Issue
 
-- #73: Align development model defaults to Gemini 2.5 Flash-Lite. Implementation is in progress on `feat/73-gemini-25-dev-defaults`.
+- #75: Add opt-in live Gemini cited-answer smoke. Implementation is in progress on `feat/75-live-cited-answer-smoke`.
 
 ## Current Architecture Decisions
 
@@ -64,6 +64,7 @@ Last updated: 2026-05-25
 - Post-fusion retrieval quality controls are deterministic and local: exact-match/overlap boosting, low-signal filtering, redundancy suppression, and persisted candidate `details` explain promoted and dropped evidence without model reranking.
 - Cited answer generation validates generated citation IDs against retrieved evidence and refuses when evidence is missing or citations are fabricated.
 - Document-grounded answer validation also requires each non-empty factual paragraph to include a valid retrieved chunk citation. Provider-native Gemini streaming is documented as deferred; backend SSE streams only after final structured answer validation.
+- Document-answer prompts explicitly require exact inline bracketed chunk IDs in `answer_text` and matching bare IDs in `citation_chunk_ids`, so live provider output has to satisfy citation integrity before persistence.
 - Query routing now labels Fast Mode, Verified Mode, no-evidence, and freshness-required routes. Verified Mode includes deterministic contradiction detection for simple numeric claims.
 - Google Search grounding is feature-flagged and disabled by default. Freshness-required questions refuse clearly when grounding is disabled. When enabled, the backend chooses a free-tier-safe Search model instead of using Gemini 3.1 Flash-Lite for grounded prompts.
 - Response caching is workspace-scoped and index-version-scoped. Safe response caching excludes refusals, live-grounded answers, and freshness-required routes.
@@ -241,6 +242,8 @@ Last updated: 2026-05-25
 - Issue #73 RED check: `uv run pytest tests/test_ai_settings.py -q` failed because settings defaults still used `gemini-3.1-flash-lite`.
 - Issue #73 focused GREEN checks: `uv run pytest tests/test_ai_settings.py tests/test_gemini_provider.py tests/test_gemini_smoke.py -q` passed with 17 tests and 1 opt-in skip; `pnpm --filter @proofpilot/web test -- app/ai-settings-card.test.tsx app/page.test.tsx` passed with 3 tests.
 - Issue #73 standard local gates: backend format, lint, Pyright, and `uv run pytest -q` passed with 115 tests and 14 opt-in skips; generated API drift check passed; frontend lint, typecheck, `pnpm test` passed with 22 tests, `pnpm build` passed, deterministic `pnpm e2e` passed with 1 test and 1 opt-in full-stack smoke skip, Docker Compose validation passed, whitespace check passed, and tracked secret-pattern scan passed.
+- Issue #75 RED check: opt-in `RUN_GEMINI_ANSWER_SMOKE=1 uv run pytest tests/test_gemini_answer_smoke.py -q` first refused because Gemini returned a citation that did not map exactly to the synthetic chunk ID, then refused because `answer_text` lacked inline bracket citations.
+- Issue #75 focused GREEN checks: prompt regression plus default smoke passed with 1 test and 1 opt-in skip; opt-in live cited-answer smoke passed with `gemini-2.5-flash-lite` and public synthetic evidence.
 
 ## Unresolved Risks
 
@@ -260,4 +263,4 @@ Last updated: 2026-05-25
 
 ## Next Issue
 
-- Complete Issue #73 local gates and merge it, then continue hardening remaining live-testing and production-readiness gaps.
+- Complete Issue #75 local gates and merge it, then continue hardening remaining live-testing and production-readiness gaps.
