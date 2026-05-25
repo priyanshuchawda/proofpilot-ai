@@ -276,6 +276,54 @@ async def test_answer_service_refuses_when_no_evidence_exists() -> None:
     assert provider.requests == []
 
 
+async def test_answer_service_refuses_when_factual_paragraph_lacks_citation() -> None:
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    async with engine.begin() as connection:
+        await connection.run_sync(Base.metadata.create_all)
+
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+    async with session_factory() as session:
+        query_run = QueryRun(
+            workspace_id="workspace-a",
+            conversation_id=None,
+            query_text="What does ProofPilot require?",
+            route="route_document_verified",
+            mode="verified",
+            cache_status="miss",
+        )
+        session.add(query_run)
+        await session.commit()
+
+        provider = FakeGeminiProvider(
+            {
+                "answer_text": (
+                    "ProofPilot requires grounded evidence. [chunk-a]\n\n"
+                    "The trace must also be visible."
+                ),
+                "citation_chunk_ids": ["chunk-a"],
+            }
+        )
+        service = AnswerService(
+            session=session,
+            gemini_provider=provider,
+            generation_model="gemini-2.5-flash-lite",
+        )
+
+        answer = await service.generate_answer(
+            retrieval=RetrievalResult(query_run_id=query_run.id, evidence=[_evidence()]),
+            query="What does ProofPilot require?",
+            mode="verified",
+            route="route_document_verified",
+            freshness_label="not_required",
+            contradictions=[],
+        )
+
+    await engine.dispose()
+
+    assert answer.confidence_label == "low"
+    assert answer.refusal_reason == "Generated answer contained unsupported factual paragraphs."
+
+
 async def test_answer_service_refuses_fabricated_citation_ids() -> None:
     engine = create_async_engine("sqlite+aiosqlite:///:memory:")
     async with engine.begin() as connection:

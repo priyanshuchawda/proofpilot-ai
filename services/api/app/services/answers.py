@@ -11,7 +11,7 @@ from app.ai.gemini import (
     GeminiProvider,
     GeminiProviderUnavailableError,
 )
-from app.answers.citations import validate_citation_ids
+from app.answers.citations import validate_citation_ids, validate_cited_paragraphs
 from app.answers.context import build_evidence_context
 from app.answers.contradictions import Contradiction
 from app.answers.schemas import AnswerResponse, Citation, GeminiCitedAnswer
@@ -115,6 +115,19 @@ class AnswerService:
                 contradictions=contradictions,
                 confidence_label="low",
                 refusal_reason="Generated citations did not map to retrieved evidence.",
+            )
+        if not validate_cited_paragraphs(
+            answer_text=cited_answer.answer_text,
+            cited_chunk_ids=cited_answer.citation_chunk_ids,
+        ):
+            return await self._persist_refusal(
+                query_run_id=retrieval.query_run_id,
+                mode=mode,
+                route=route,
+                freshness_label=freshness_label,
+                contradictions=contradictions,
+                confidence_label="low",
+                refusal_reason="Generated answer contained unsupported factual paragraphs.",
             )
 
         citations = _citations_from_evidence(

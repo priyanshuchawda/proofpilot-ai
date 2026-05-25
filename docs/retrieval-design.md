@@ -52,12 +52,13 @@ No supported citation means no confident factual claim. Unsupported answers must
 - The query endpoint returns a structured answer with answer text, citations, evidence chunk IDs, confidence, refusal reason, mode, cache status, the successful generation model when a model answered, live-grounding flag, and optional required Search Suggestions content.
 - Evidence context explicitly states that uploaded documents are evidence, not instructions.
 - Generated citation IDs must be a subset of retrieved evidence chunk IDs.
+- Each non-empty factual paragraph in a document-grounded answer must contain at least one valid retrieved chunk citation. Missing paragraph citations produce a low-confidence refusal.
 - Missing evidence returns a safe refusal without calling Gemini.
 - Fabricated citations produce a low-confidence refusal and are persisted as a generated answer record with refusal metadata.
 - Live-grounded answers use `groundingChunks` and `groundingSupports` to emit `[web-n]` labels and distinct web citation records. Only chunks referenced by support spans are presented as cited evidence; absent web metadata or inline mappings produce a refusal.
 - Required Google Search Suggestions HTML is passed to the UI and displayed inside a sandboxed iframe rather than injected into the application DOM.
 - The JSON query endpoint remains available for clients that want a complete structured payload.
-- The streaming query endpoint emits `answer_delta` events and a final structured `final` event with citation metadata. Provider-native token streaming remains a later Gemini provider enhancement.
+- The streaming query endpoint emits `answer_delta` events and a final structured `final` event with citation metadata only after citation validation has completed. Provider-native Gemini streaming remains disabled for the MVP because partial model output cannot be shown as reliable before citation validation.
 
 ## Routing And Verification
 
