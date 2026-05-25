@@ -56,6 +56,7 @@ Last updated: 2026-05-25
 - API responses include `X-Request-ID`, and request logs are structured JSON records containing only safe metadata: method, path without query string, status, duration, request ID, rate-limit outcome, and query-run correlation fields when available.
 - Qdrant collection setup is idempotent when the stored vector dimension and distance metric match the active embedding and search contract. Under asynchronous processing, incompatible configuration is recorded as a non-sensitive failed ingestion status.
 - Hybrid retrieval uses deterministic Reciprocal Rank Fusion over dense Qdrant IDs and workspace-scoped PostgreSQL full-text candidates, with trace rows persisted for inspection. SQLite unit tests inject deterministic keyword scoring behind the same typed retriever boundary.
+- Post-fusion retrieval quality controls are deterministic and local: exact-match/overlap boosting, low-signal filtering, redundancy suppression, and persisted candidate `details` explain promoted and dropped evidence without model reranking.
 - Cited answer generation validates generated citation IDs against retrieved evidence and refuses when evidence is missing or citations are fabricated.
 - Query routing now labels Fast Mode, Verified Mode, no-evidence, and freshness-required routes. Verified Mode includes deterministic contradiction detection for simple numeric claims.
 - Google Search grounding is feature-flagged and disabled by default. Freshness-required questions refuse clearly when grounding is disabled. When enabled, the backend chooses a free-tier-safe Search model instead of using Gemini 3.1 Flash-Lite for grounded prompts.
@@ -217,6 +218,10 @@ Last updated: 2026-05-25
 - Issue #60 focused GREEN checks: `uv run pytest tests/test_local_session_access.py -q` passed with 4 tests; focused API compatibility tests passed with 19 tests after adding workspace/document/query/trace ownership checks.
 - Issue #60 migration verification: local PostgreSQL `uv run alembic upgrade head`, `uv run alembic downgrade 0002_chunk_fts_index`, and `uv run alembic upgrade head` passed for `0003_workspace_owner_session`.
 - Issue #60 standard local gates: backend format, lint, Pyright, and `uv run pytest -q` passed with 105 tests and 14 opt-in skips; generated API client was regenerated and `pnpm api:check` passed; frontend lint, typecheck, `pnpm test` passed with 19 tests, `pnpm build` passed, deterministic `pnpm e2e` passed with 1 test and 1 opt-in smoke skip, Docker Compose validation passed, whitespace checks passed, generated Next.js type cleanliness passed, and tracked secret-pattern scan passed.
+- Issue #61 RED check: `uv run pytest tests/test_retrieval_quality.py -q` failed because `app.retrieval.quality` did not exist.
+- Issue #61 focused GREEN checks: `uv run pytest tests/test_retrieval_quality.py tests/test_hybrid_retrieval_service.py tests/test_query_runs_api.py -q` passed with 8 tests; focused Ruff and Pyright passed after typing quality details.
+- Issue #61 migration verification: local PostgreSQL `uv run alembic upgrade head`, `uv run alembic downgrade 0003_workspace_owner_session`, and `uv run alembic upgrade head` passed for `0004_retrieval_candidate_details`.
+- Issue #61 standard local gates: backend format, lint, Pyright, and `uv run pytest -q` passed with 108 tests and 14 opt-in skips; generated API client was regenerated and `pnpm api:check` passed; frontend lint, typecheck, `pnpm test` passed with 19 tests, `pnpm build` passed, deterministic `pnpm e2e` passed with 1 test and 1 opt-in smoke skip, Docker Compose validation passed, whitespace checks passed, generated Next.js type cleanliness passed, and tracked secret-pattern scan passed.
 
 ## Unresolved Risks
 
