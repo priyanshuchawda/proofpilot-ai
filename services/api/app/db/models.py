@@ -134,6 +134,7 @@ class RetrievalCandidate(TimestampMixin, Base):
     source: Mapped[str] = mapped_column(String(40), nullable=False)
     rank: Mapped[int] = mapped_column(Integer, nullable=False)
     score: Mapped[str] = mapped_column(String(80), nullable=False)
+    details: Mapped[dict[str, object]] = mapped_column(JSON, default=dict)
 
 
 class CitedEvidence(TimestampMixin, Base):

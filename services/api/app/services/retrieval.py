@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.models import DocumentChunk, QueryRun, RetrievalCandidate
 from app.retrieval.fusion import RankedCandidate, fuse_ranked_candidates
 from app.retrieval.keyword import KeywordRetriever
+from app.retrieval.quality import QualityCandidate, rerank_for_quality
 from app.retrieval.schemas import EvidenceChunk, RetrievalResult
 from app.services.embedding_index import EmbeddingIndexService
 
@@ -55,20 +56,31 @@ class HybridRetrievalService:
             workspace_id=workspace_id,
             chunk_ids=[candidate.chunk_id for candidate in fused],
         )
+        quality_candidates = [
+            QualityCandidate(candidate=candidate, text=chunks[candidate.chunk_id].chunk_text)
+            for candidate in fused
+            if candidate.chunk_id in chunks
+        ]
+        selected, dropped = rerank_for_quality(
+            query=query,
+            candidates=quality_candidates,
+            limit=limit,
+        )
         evidence: list[EvidenceChunk] = []
-        for candidate in fused:
-            chunk = chunks.get(candidate.chunk_id)
-            if chunk is None:
-                continue
+        for candidate in [*selected, *dropped]:
+            chunk = chunks[candidate.candidate.chunk_id]
             self._session.add(
                 RetrievalCandidate(
                     query_run_id=query_run.id,
-                    chunk_id=candidate.chunk_id,
-                    source=candidate.source,
-                    rank=candidate.rank,
-                    score=f"{candidate.score:.8f}",
+                    chunk_id=candidate.candidate.chunk_id,
+                    source=candidate.candidate.source,
+                    rank=candidate.candidate.rank,
+                    score=f"{candidate.candidate.score:.8f}",
+                    details=candidate.details,
                 )
             )
+        for candidate in selected:
+            chunk = chunks[candidate.candidate.chunk_id]
             evidence.append(
                 EvidenceChunk(
                     chunk_id=chunk.id,
@@ -81,8 +93,8 @@ class HybridRetrievalService:
                     section_heading=chunk.section_heading,
                     chunk_order=chunk.chunk_order,
                     text=chunk.chunk_text,
-                    score=candidate.score,
-                    source=candidate.source,
+                    score=candidate.candidate.score,
+                    source=candidate.candidate.source,
                 )
             )
 

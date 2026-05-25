@@ -29,6 +29,7 @@ class RetrievalCandidateTrace(BaseModel):
     source_filename: str | None = None
     page_number: int | None = None
     section_heading: str | None = None
+    details: dict[str, object]
 
 
 class CitedEvidenceTrace(BaseModel):
@@ -160,6 +161,7 @@ async def get_query_run_trace(
                 source_filename=chunk.source_filename if chunk else None,
                 page_number=chunk.page_number if chunk else None,
                 section_heading=chunk.section_heading if chunk else None,
+                details=candidate.details,
             )
             for candidate, chunk in candidates
         ],

@@ -39,7 +39,8 @@ Document upload persists file metadata and enqueues local Redis processing. The 
 - Dense retrieval returns ordered chunk IDs from Qdrant and is filtered by workspace before evidence is exposed.
 - Production keyword retrieval runs workspace-scoped PostgreSQL `websearch_to_tsquery`/`ts_rank_cd` ranking over a GIN-indexed text vector of section headings and chunk text. Unit tests inject a deterministic exact-term retriever through the same protocol so they do not require PostgreSQL.
 - Reciprocal Rank Fusion combines dense and keyword rankings. Chunks supported by both sources are marked `hybrid`.
-- Retrieval stores a `query_run` and final ranked `retrieval_candidate` rows so the UI can later inspect the trace.
+- Deterministic post-fusion quality controls promote exact/near-exact lexical overlap, drop low-signal candidates, and suppress redundant chunks with token-set diversity checks. No paid model reranker is used.
+- Retrieval stores a `query_run` and ranked `retrieval_candidate` rows with JSON `details` so the UI can inspect promotion and drop reasons.
 - Empty retrieval still stores the query run and returns no evidence, allowing later answer generation to choose a safe refusal.
 
 ## Citation Rule
