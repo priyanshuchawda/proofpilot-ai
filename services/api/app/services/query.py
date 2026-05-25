@@ -10,6 +10,7 @@ from app.cache.backends import CacheBackend
 from app.cache.keys import response_cache_key
 from app.cache.policy import can_cache_response
 from app.db.models import LatencyMetric, QueryRun
+from app.observability.telemetry import TelemetryRegistry
 from app.retrieval.schemas import RetrievalResult
 from app.routing.query import QueryMode, determine_query_route
 
@@ -49,6 +50,7 @@ class QueryService:
         response_cache: CacheBackend | None = None,
         index_version: str = "v1",
         response_cache_ttl_seconds: int = 300,
+        telemetry: TelemetryRegistry | None = None,
     ) -> None:
         self._session = session
         self._retrieval_service = retrieval_service
@@ -57,6 +59,7 @@ class QueryService:
         self._response_cache = response_cache
         self._index_version = index_version
         self._response_cache_ttl_seconds = response_cache_ttl_seconds
+        self._telemetry = telemetry
 
     async def answer_workspace_query(
         self,
@@ -75,9 +78,19 @@ class QueryService:
         if self._response_cache is not None:
             cached = await self._response_cache.get_json(cache_key)
             if cached is not None:
+                self._record_cache_event(
+                    result="hit",
+                    workspace_id=workspace_id,
+                    mode=mode,
+                )
                 return AnswerResponse.model_validate(cached).model_copy(
                     update={"cache_status": "hit"}
                 )
+            self._record_cache_event(
+                result="miss",
+                workspace_id=workspace_id,
+                mode=mode,
+            )
 
         total_started_at = perf_counter()
         retrieval_started_at = perf_counter()
@@ -149,6 +162,22 @@ class QueryService:
                 metric_name=metric_name,
                 duration_ms=duration_ms,
             )
+        )
+
+    def _record_cache_event(
+        self,
+        *,
+        result: str,
+        workspace_id: str,
+        mode: str,
+    ) -> None:
+        if self._telemetry is None:
+            return
+        self._telemetry.record_cache_event(
+            cache_name="response",
+            result=result,
+            workspace_id=workspace_id,
+            mode=mode,
         )
 
 

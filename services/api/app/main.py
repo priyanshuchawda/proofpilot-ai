@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from app.api.documents import router as documents_router
 from app.api.evaluations import router as evaluations_router
 from app.api.health import router as health_router
+from app.api.metrics import router as metrics_router
 from app.api.query import router as query_router
 from app.api.query_runs import router as query_runs_router
 from app.api.settings import router as settings_router
@@ -47,6 +48,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.include_router(query_router)
     application.include_router(query_runs_router)
     application.include_router(evaluations_router)
+    application.include_router(metrics_router)
     application.add_api_route(
         "/api/v1/health", health, methods=["GET"], response_model=HealthResponse
     )

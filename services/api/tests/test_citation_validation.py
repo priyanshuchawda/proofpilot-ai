@@ -18,8 +18,7 @@ def test_validate_citation_ids_rejects_fabricated_ids() -> None:
 def test_validate_cited_paragraphs_requires_each_paragraph_to_have_a_citation() -> None:
     assert validate_cited_paragraphs(
         answer_text=(
-            "ProofPilot requires evidence. [chunk-a]\n\n"
-            "The trace must be visible. [chunk-b]"
+            "ProofPilot requires evidence. [chunk-a]\n\nThe trace must be visible. [chunk-b]"
         ),
         cited_chunk_ids=["chunk-a", "chunk-b"],
     )

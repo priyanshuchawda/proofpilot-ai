@@ -113,3 +113,30 @@ test("generated client fetches query-run trace details", async () => {
     expect.objectContaining({ method: "GET" }),
   );
 });
+
+test("generated client fetches operational metrics", async () => {
+  const fetcher = vi.fn(async () => ({
+    ok: true,
+    json: async () => ({
+      dependencies: [{ detail: null, name: "postgres", status: "ok" }],
+      telemetry: {
+        cache_events: [],
+        gemini_errors: [],
+        gemini_requests: [],
+      },
+    }),
+  })) as unknown as typeof fetch;
+
+  const client = createProofPilotClient({
+    baseUrl: "http://api.test/",
+    fetch: fetcher,
+  });
+
+  const metrics = await client.getOperationalMetrics();
+
+  expect(metrics.dependencies[0].name).toBe("postgres");
+  expect(fetcher).toHaveBeenCalledWith(
+    "http://api.test/api/v1/metrics/operational",
+    expect.objectContaining({ method: "GET" }),
+  );
+});

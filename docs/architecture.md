@@ -65,6 +65,8 @@ Issue #19 adds workspace-scoped response cache keys that include index version, 
 
 Issue #58 adds request-scoped JSON logging through middleware. The middleware propagates valid `X-Request-ID` values or generates one, exposes the header to browsers, and logs only trace-safe fields. Query handlers attach safe answer metadata to the request state so logs can correlate client-visible failures or slow responses with `query_run_id`, cache status, effective generation model, and live-grounding usage. It intentionally excludes request bodies, uploaded document text, raw headers, query strings, and secrets.
 
+Issue #65 adds local operational counters for Gemini requests, Gemini availability errors, and response-cache hit/miss outcomes. Counters are in-process and aggregate-only: they label Gemini calls by provider/model/Search usage, cache outcomes by cache name/mode/hashed workspace ID, and never include prompts, uploaded document text, raw workspace IDs, headers, or API keys. `GET /api/v1/metrics/operational` returns those counters with the existing safe dependency health snapshot.
+
 ## Abuse Controls
 
 Issue #57 protects document upload, query, streamed query, and evaluation execution with configurable Redis-backed fixed-window limits. Rate-limit keys hash the backend-observed client identifier before storage, exceeded budgets return HTTP `429` with `Retry-After`, and Redis failures fail closed with a safe `503` for protected expensive actions. Until authentication exists, client network address is the MVP caller boundary.

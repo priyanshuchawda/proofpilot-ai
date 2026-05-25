@@ -15,6 +15,7 @@
 - The UI must warn users before upload to use public demo documents only.
 - Server-side redaction must run before document chunks or prompts are sent to any model.
 - Request logs include only trace-safe metadata: request ID, method, route path without query string, status code, duration, rate-limit outcome, and safe query-run correlation fields when available. They must not include uploaded file content, prompt text, authorization headers, query strings, or API keys.
+- Operational telemetry is local and aggregate-only. Gemini counters store provider, model, Search usage, status code, and count. Cache counters store cache name, hit/miss result, mode, and a short hash of the workspace ID. Dependency summaries expose service name, status, and exception class only.
 - Local session ownership uses `X-ProofPilot-Session` as a development-only identity boundary. When `PROOFPILOT_WORKSPACE_OWNERSHIP_ENABLED=true`, foreign workspace, document, query, and query-run trace access returns `404` to avoid confirming resource existence.
 
 ## Upload Safety
