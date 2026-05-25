@@ -44,6 +44,7 @@ Gemini API access is backend-only. The frontend never receives `GEMINI_API_KEY`.
 - Local latency metrics.
 - Trace-safe JSON request logs with `X-Request-ID`, route, status, duration, rate-limit outcome, and safe query-run correlation metadata when available.
 - Local aggregate operational metrics for Gemini calls, cache hit/miss counts, and dependency health.
+- Dashboard operational metrics panel for local live-testing visibility.
 - Evaluation dashboard with deterministic metrics.
 - Generated TypeScript API client with OpenAPI drift check.
 - Live API health and Gemini settings cards for local demo readiness.

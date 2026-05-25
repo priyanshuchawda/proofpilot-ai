@@ -40,6 +40,19 @@ test("renders the API health check status", async () => {
           }),
         };
       }
+      if (url.endsWith("/api/v1/metrics/operational")) {
+        return {
+          ok: true,
+          json: async () => ({
+            dependencies: [{ detail: null, name: "postgres", status: "ok" }],
+            telemetry: {
+              cache_events: [],
+              gemini_errors: [],
+              gemini_requests: [],
+            },
+          }),
+        };
+      }
 
       return {
         ok: true,

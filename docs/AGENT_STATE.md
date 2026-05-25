@@ -34,10 +34,11 @@ Last updated: 2026-05-25
 - #60: Design local auth/session and workspace ownership boundary.
 - #61: Add deterministic retrieval quality controls.
 - #62: Strengthen citation paragraph validation.
+- #65: Add provider, cache, and dependency telemetry counters.
 
 ## Current Issue
 
-- #65: Add provider, cache, and dependency telemetry counters. Implementation is in progress on `feat/65-telemetry-counters`.
+- #71: Add operational metrics dashboard panel. Implementation is in progress on `feat/71-operational-metrics-panel`.
 
 ## Current Architecture Decisions
 
@@ -73,6 +74,7 @@ Last updated: 2026-05-25
 - Frontend local API defaults use `http://127.0.0.1:8000` to avoid Windows `localhost` ambiguity. Override `NEXT_PUBLIC_API_BASE_URL` when port `8000` is already owned by another local project.
 - Dashboard workflow now owns selected workspace state and wires workspace/document management into the query console.
 - Query UI now includes a retrieval trace panel built from the final structured answer payload. It shows route, effective generation model, cache status, confidence, freshness, live grounding usage, query run ID, evidence chunk IDs, cited chunk IDs, and contradiction keys without exposing hidden chain-of-thought.
+- Dashboard UI shows local operational metrics for dependency health, Gemini request/error counters, and response-cache hit/miss counters. It consumes only the safe aggregate `/api/v1/metrics/operational` contract.
 - `GET /api/v1/query-runs/{query_run_id}` exposes persisted trace details for a single query run, including ordered retrieval candidates, cited evidence, generated answer, verification result, and latency metrics. The generated frontend client includes `getQueryRun`.
 - Opt-in Search grounding accepts current-information answers only when Gemini returns grounded web sources, support spans for inline `[web-n]` labels, and required Search Suggestions display metadata. Only sources referenced by support spans become displayed web evidence. The UI distinguishes web sources from uploaded documents and renders provider HTML in a sandboxed iframe.
 - Freshness routing is evaluated before empty document retrieval, allowing an explicitly enabled web-grounded answer without uploaded document evidence. HTTP `429` and `503` Gemini availability responses degrade to safe retry routes without paid fallback.
@@ -233,6 +235,9 @@ Last updated: 2026-05-25
 - Issue #65 RED check: `uv run pytest tests/test_operational_telemetry.py -q` failed on missing `InstrumentedGeminiProvider`.
 - Issue #65 focused GREEN checks: `uv run pytest tests/test_operational_telemetry.py tests/test_gemini_provider.py tests/test_query_cache.py tests/test_dependency_health.py tests/test_evaluation_api.py -q` passed with 22 tests; changed-file Ruff and Pyright passed; `pnpm api:check` passed; `pnpm --filter @proofpilot/web test -- app/api-client.test.ts` passed with 4 tests.
 - Issue #65 standard local gates: backend format, lint, Pyright, and `uv run pytest -q` passed with 114 tests and 14 opt-in skips; generated API drift check passed; frontend lint, typecheck, `pnpm test` passed with 20 tests, `pnpm build` passed, deterministic `pnpm e2e` passed with 1 test and 1 opt-in full-stack smoke skip, Docker Compose validation passed, whitespace checks passed, and tracked secret-pattern scan passed.
+- Issue #71 RED check: `pnpm --filter @proofpilot/web test -- app/operational-metrics-panel.test.tsx` failed because the operational metrics panel did not exist.
+- Issue #71 focused GREEN check: `pnpm --filter @proofpilot/web test -- app/operational-metrics-panel.test.tsx app/page.test.tsx` passed with 3 tests.
+- Issue #71 standard local gates: frontend lint, typecheck, `pnpm test` passed with 22 tests, `pnpm build` passed, deterministic `pnpm e2e` passed with 1 test and 1 opt-in full-stack smoke skip, whitespace check passed, and tracked secret-pattern scan passed.
 
 ## Unresolved Risks
 
@@ -252,4 +257,4 @@ Last updated: 2026-05-25
 
 ## Next Issue
 
-- Complete Issue #65 local gates and merge it, then create the next hardening issue from the remaining architecture gaps.
+- Complete Issue #71 local gates and merge it, then continue hardening remaining live-testing and production-readiness gaps.

@@ -3,6 +3,7 @@ import { ShieldCheck } from "lucide-react";
 import { AISettingsCard } from "./ai-settings-card";
 import { DashboardWorkflow } from "./dashboard-workflow";
 import { HealthCard } from "./health-card";
+import { OperationalMetricsPanel } from "./operational-metrics-panel";
 
 export default function Home() {
   return (
@@ -42,6 +43,7 @@ export default function Home() {
         </div>
 
         <DashboardWorkflow />
+        <OperationalMetricsPanel />
       </section>
     </main>
   );
