@@ -29,10 +29,11 @@ Last updated: 2026-05-25
 - #52: Fix configurable strict CORS origins for local frontend ports.
 - #55: Add deterministic Playwright coverage for the cited-answer user flow.
 - #57: Add Redis-backed rate limits for sensitive API actions.
+- #58: Add structured request telemetry and trace-safe JSON logging.
 
 ## Current Issue
 
-- #58: Add structured request telemetry and trace-safe JSON logging. Implementation is in progress on `feat/58-structured-telemetry`.
+- #59: Add Docker-backed full-stack browser smoke for worker ingestion and cited answers. Implementation is in progress on `feat/59-docker-fullstack-smoke`.
 
 ## Current Architecture Decisions
 
@@ -43,8 +44,10 @@ Last updated: 2026-05-25
 - Treat Gemini model IDs and Google Search grounding as configuration. Search grounding is disabled by default until the selected model is verified as free-tier-safe.
 - Current provider defaults prefer `gemini-3.1-flash-lite` for non-search generation, retry temporary non-Search overload once through `gemini-2.5-flash-lite`, and use `gemini-2.5-flash-lite` as the separately selected free-tier-safe Search-grounding fallback.
 - Keep real Gemini smoke tests manual only behind `RUN_GEMINI_SMOKE=1`.
+- `GEMINI_PROVIDER_MODE=mock` forces deterministic zero-cost generation even when an ignored local `.env` contains a real key; the full-stack smoke uses this by default.
 - Use deterministic local embeddings by default for current vector plumbing and tests. Real Gemini embeddings are opt-in with `GEMINI_EMBEDDINGS_ENABLED=true` and `gemini-embedding-2`.
 - Uploaded documents return `uploaded` after validated local storage and Redis enqueue. A local Python worker uses the existing `DocumentIndexer` boundary to parse, redact, chunk, embed, and index documents while persisting lifecycle status.
+- Qdrant collection name is configurable through `QDRANT_COLLECTION`; opt-in full-stack smoke runs use an isolated collection to avoid collisions with existing local demo vectors.
 - Redis ingestion jobs use pending and in-flight lists. The worker acknowledges terminal processing and requeues unacknowledged work at startup; the recovery contract supports one local worker process and resumes already committed chunk stages safely.
 - Browser CORS uses a validated explicit-origin allowlist from `PROOFPILOT_API_CORS_ORIGINS`; wildcard origins and URL values containing credentials or non-origin components are rejected.
 - Sensitive POST routes use a Redis-backed fixed-window rate limiter keyed by hashed backend-observed caller identifiers. Uploads, query JSON/SSE, and evaluation execution return `429` with `Retry-After` on exhaustion and safe `503` when the limiter backend is unavailable.
@@ -204,12 +207,16 @@ Last updated: 2026-05-25
 - Issue #58 RED check: `uv run pytest tests/test_request_logging.py -q` failed because responses did not include `X-Request-ID` and no structured request log was emitted.
 - Issue #58 focused GREEN checks: changed-file Ruff/Pyright passed; `uv run pytest tests/test_request_logging.py tests/test_query_api.py tests/test_rate_limiting.py -q` passed with 14 tests.
 - Issue #58 standard local gates: backend format, lint, Pyright, and `uv run pytest -q` passed with 97 tests and 14 opt-in skips; generated API drift check passed; Docker Compose validation, whitespace checks, generated Next.js type cleanliness, and tracked secret-pattern scan passed.
+- Issue #59 RED checks: `pnpm fullstack:smoke` failed because the command did not exist; focused backend tests failed because isolated Qdrant collection config and structured mock cited JSON were missing; the first flagged runner exposed a bad zero exit on Playwright failure and stale API process cleanup.
+- Issue #59 focused GREEN checks: changed-file Ruff/Pyright passed; `uv run pytest tests/test_gemini_provider.py tests/test_ai_settings.py tests/test_query_api.py tests/test_document_service_indexing.py -q` passed with 21 tests; `pnpm typecheck` passed; unflagged `pnpm fullstack:smoke` skipped safely.
+- Issue #59 Docker-backed full-stack smoke: `RUN_FULL_STACK_SMOKE=1 pnpm fullstack:smoke` passed with local Docker PostgreSQL/Redis/Qdrant, Alembic migration, API, one worker, production frontend, public Markdown upload, worker indexing, Verified Mode query, cited answer, evidence, and retrieval trace using isolated Qdrant collection `proofpilot_smoke_1779724723800`.
+- Issue #59 standard local gates: backend format, lint, Pyright, and `uv run pytest -q` passed with 101 tests and 14 opt-in skips; generated API drift check passed; frontend lint, typecheck, `pnpm test` passed with 19 tests, `pnpm build` passed, deterministic `pnpm e2e` passed with 1 test and 1 opt-in smoke skip, Docker Compose validation passed, whitespace checks passed, generated Next.js type cleanliness passed, and tracked secret-pattern scan passed.
 
 ## Unresolved Risks
 
 - GitHub Actions are intentionally disabled for now to avoid spending Actions minutes before final hardening.
 - File Search pricing details must be rechecked before managed File Search integration code is added.
-- Standard Playwright coverage uses deterministic browser-intercepted API fixtures; a fully automated Docker-backed browser flow with the worker and opt-in Gemini provider remains future hardening.
+- Standard Playwright coverage uses deterministic browser-intercepted API fixtures; `RUN_FULL_STACK_SMOKE=1 pnpm fullstack:smoke` now covers a Docker-backed local API, worker, upload, indexing, query, citation, and trace flow with mock generation by default.
 - Rate limiting currently identifies unauthenticated callers by backend-observed client network address; authenticated principal/session scoping is tracked in Issue #60.
 - Local PostgreSQL uses host port `55432` to avoid a personal Postgres conflict on `5432`.
 - Provider-native Gemini token streaming remains a later enhancement. The current stream transport emits deltas from the finalized cited answer text.
@@ -223,4 +230,4 @@ Last updated: 2026-05-25
 
 ## Next Issue
 
-- Complete Issue #58 local gates and merge it, then implement Docker-backed full-stack browser smoke in Issue #59.
+- Complete Issue #59 local gates and merge it, then implement local auth/session workspace ownership boundaries in Issue #60.

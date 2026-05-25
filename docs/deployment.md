@@ -11,6 +11,7 @@ docker compose -f infra/docker-compose.yml up -d
 PostgreSQL is available at `postgresql+asyncpg://proofpilot:proofpilot@127.0.0.1:55432/proofpilot`.
 Redis is available at `redis://localhost:6379/0`.
 Qdrant is available at `http://localhost:6333`.
+The default vector collection is `proofpilot_chunks`; set `QDRANT_COLLECTION` for isolated local smoke runs.
 
 ## Backend
 
@@ -49,6 +50,7 @@ Deployment to hosted platforms is deferred until the free-tier contract and secr
 
 - GitHub Actions are intentionally deferred until final hardening.
 - Search grounding is disabled by default.
+- `GEMINI_PROVIDER_MODE=auto` uses the mock provider only when no backend key is configured in development. Use `GEMINI_PROVIDER_MODE=mock` for zero-cost deterministic smoke tests and `GEMINI_PROVIDER_MODE=google` only for intentional live-provider checks.
 - Use `gemini-3.1-flash-lite` for ordinary live generation with `gemini-2.5-flash-lite` configured as the temporary-overload and Search-safe fallback.
 - Set `PROOFPILOT_API_CORS_ORIGINS` to an explicit comma-separated local frontend allowlist when using non-default ports; wildcard origins are rejected.
 - Keep `PROOFPILOT_RATE_LIMITING_ENABLED=true` outside controlled local tests. Protected expensive routes fail closed when Redis is unavailable.

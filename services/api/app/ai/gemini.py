@@ -1,3 +1,5 @@
+import json
+import re
 from collections.abc import Mapping
 from typing import Any, Protocol, cast
 
@@ -58,6 +60,19 @@ class GeminiProvider(Protocol):
 
 class MockGeminiProvider:
     async def generate_text(self, request: GeminiGenerateRequest) -> GeminiGenerateResponse:
+        if request.response_json_schema is not None:
+            chunk_id = _first_prompt_chunk_id(request.prompt)
+            payload = {
+                "answer_text": (
+                    f"Mock cited answer based on evidence [{chunk_id}]." if chunk_id else ""
+                ),
+                "citation_chunk_ids": [chunk_id] if chunk_id else [],
+            }
+            return GeminiGenerateResponse(
+                text=json.dumps(payload, separators=(",", ":")),
+                model=request.model,
+                provider="mock",
+            )
         return GeminiGenerateResponse(
             text=f"Mock Gemini response for: {request.prompt}",
             model=request.model,
@@ -113,6 +128,10 @@ class GoogleGenAIProvider:
 
 
 def build_gemini_provider(settings: Settings) -> GeminiProvider:
+    if settings.gemini_provider_mode == "mock":
+        return MockGeminiProvider()
+    if settings.gemini_provider_mode == "google":
+        return GoogleGenAIProvider(api_key=settings.gemini_api_key)
     if not settings.gemini_api_key and settings.proofpilot_env == "development":
         return MockGeminiProvider()
     return GoogleGenAIProvider(api_key=settings.gemini_api_key)
@@ -268,3 +287,8 @@ def _value(obj: object | None, *names: str) -> object | None:
         if hasattr(obj, name):
             return cast(object | None, getattr(obj, name))
     return None
+
+
+def _first_prompt_chunk_id(prompt: str) -> str | None:
+    match = re.search(r"^\[([A-Za-z0-9_.:-]+)\]", prompt, flags=re.MULTILINE)
+    return match.group(1) if match else None
