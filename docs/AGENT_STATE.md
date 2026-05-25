@@ -58,6 +58,7 @@ Last updated: 2026-05-25
 - Hybrid retrieval uses deterministic Reciprocal Rank Fusion over dense Qdrant IDs and workspace-scoped PostgreSQL full-text candidates, with trace rows persisted for inspection. SQLite unit tests inject deterministic keyword scoring behind the same typed retriever boundary.
 - Post-fusion retrieval quality controls are deterministic and local: exact-match/overlap boosting, low-signal filtering, redundancy suppression, and persisted candidate `details` explain promoted and dropped evidence without model reranking.
 - Cited answer generation validates generated citation IDs against retrieved evidence and refuses when evidence is missing or citations are fabricated.
+- Document-grounded answer validation also requires each non-empty factual paragraph to include a valid retrieved chunk citation. Provider-native Gemini streaming is documented as deferred; backend SSE streams only after final structured answer validation.
 - Query routing now labels Fast Mode, Verified Mode, no-evidence, and freshness-required routes. Verified Mode includes deterministic contradiction detection for simple numeric claims.
 - Google Search grounding is feature-flagged and disabled by default. Freshness-required questions refuse clearly when grounding is disabled. When enabled, the backend chooses a free-tier-safe Search model instead of using Gemini 3.1 Flash-Lite for grounded prompts.
 - Response caching is workspace-scoped and index-version-scoped. Safe response caching excludes refusals, live-grounded answers, and freshness-required routes.
@@ -222,6 +223,9 @@ Last updated: 2026-05-25
 - Issue #61 focused GREEN checks: `uv run pytest tests/test_retrieval_quality.py tests/test_hybrid_retrieval_service.py tests/test_query_runs_api.py -q` passed with 8 tests; focused Ruff and Pyright passed after typing quality details.
 - Issue #61 migration verification: local PostgreSQL `uv run alembic upgrade head`, `uv run alembic downgrade 0003_workspace_owner_session`, and `uv run alembic upgrade head` passed for `0004_retrieval_candidate_details`.
 - Issue #61 standard local gates: backend format, lint, Pyright, and `uv run pytest -q` passed with 108 tests and 14 opt-in skips; generated API client was regenerated and `pnpm api:check` passed; frontend lint, typecheck, `pnpm test` passed with 19 tests, `pnpm build` passed, deterministic `pnpm e2e` passed with 1 test and 1 opt-in smoke skip, Docker Compose validation passed, whitespace checks passed, generated Next.js type cleanliness passed, and tracked secret-pattern scan passed.
+- Issue #62 RED check: `uv run pytest tests/test_citation_validation.py tests/test_answer_service.py -q` failed because `validate_cited_paragraphs` did not exist.
+- Issue #62 focused GREEN check: `uv run pytest tests/test_citation_validation.py tests/test_answer_service.py -q` passed with 19 tests after adding paragraph-level citation validation and answer-service refusal.
+- Issue #62 standard local gates: backend format, lint, Pyright, and `uv run pytest -q` passed with 110 tests and 14 opt-in skips; generated API drift check passed; frontend lint, typecheck, `pnpm test` passed with 19 tests, `pnpm build` passed, deterministic `pnpm e2e` passed with 1 test and 1 opt-in smoke skip, Docker Compose validation passed, whitespace checks passed, generated Next.js type cleanliness passed, and tracked secret-pattern scan passed.
 
 ## Unresolved Risks
 
