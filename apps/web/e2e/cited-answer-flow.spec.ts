@@ -56,6 +56,40 @@ test("uploads public evidence and displays a cited verified answer with its trac
       return;
     }
 
+    if (method === "GET" && url.pathname === "/api/v1/metrics/operational") {
+      await route.fulfill({
+        headers: corsHeaders,
+        json: {
+          dependencies: [
+            { detail: null, name: "postgres", status: "ok" },
+            { detail: null, name: "redis", status: "ok" },
+            { detail: null, name: "qdrant", status: "ok" },
+          ],
+          telemetry: {
+            cache_events: [
+              {
+                cache_name: "response",
+                count: 1,
+                mode: "verified",
+                result: "miss",
+                workspace_hash: "e2e-workspace-hash",
+              },
+            ],
+            gemini_errors: [],
+            gemini_requests: [
+              {
+                count: 1,
+                google_search: false,
+                model: "gemini-2.5-flash-lite",
+                provider: "mock",
+              },
+            ],
+          },
+        },
+      });
+      return;
+    }
+
     if (method === "GET" && url.pathname === "/api/v1/workspaces") {
       await route.fulfill({
         headers: corsHeaders,
