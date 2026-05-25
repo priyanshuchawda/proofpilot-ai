@@ -2,6 +2,7 @@ from httpx import ASGITransport, AsyncClient
 
 from app.answers.schemas import AnswerResponse, Citation
 from app.api.query import get_query_service
+from app.core.config import Settings, get_settings
 from app.main import app
 
 
@@ -40,6 +41,9 @@ async def test_query_endpoint_returns_structured_cited_answer() -> None:
         return FakeQueryService()
 
     app.dependency_overrides[get_query_service] = fake_query_service
+    app.dependency_overrides[get_settings] = lambda: Settings(
+        proofpilot_rate_limiting_enabled=False
+    )
     transport = ASGITransport(app=app)
     try:
         async with AsyncClient(transport=transport, base_url="http://testserver") as client:
@@ -63,6 +67,9 @@ async def test_query_stream_endpoint_returns_sse_answer_events() -> None:
         return FakeQueryService()
 
     app.dependency_overrides[get_query_service] = fake_query_service
+    app.dependency_overrides[get_settings] = lambda: Settings(
+        proofpilot_rate_limiting_enabled=False
+    )
     transport = ASGITransport(app=app)
     try:
         async with AsyncClient(transport=transport, base_url="http://testserver") as client:

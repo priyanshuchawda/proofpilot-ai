@@ -28,6 +28,7 @@ ProofPilot AI is a monorepo with a TypeScript frontend, Python AI backend, and l
 - Cache keys include workspace and index version.
 - Frontend API helpers are generated from the FastAPI OpenAPI schema and checked with `pnpm api:check`.
 - Playwright browser coverage exercises the upload-to-cited-answer UI contract against deterministic versioned API/SSE fixtures; infrastructure and Gemini paths retain separate verification.
+- Sensitive POST routes use a Redis-backed fixed-window rate limiter keyed by hashed backend-observed client identifiers. Authenticated principal scoping is deferred to the auth/workspace ownership issue.
 - No real Gemini calls run in automated CI.
 
 ## Persistence
@@ -57,6 +58,10 @@ Issue #15 adds deterministic routing metadata for Fast Mode, Verified Mode, no-e
 ## Caching And Metrics
 
 Issue #19 adds workspace-scoped response cache keys that include index version, mode, and normalized query hash. Safe response caching is disabled for refusals, live-grounded answers, and freshness-required routes. Query execution persists local latency metrics for retrieval, answer generation, and total query time without storing document text in metric names.
+
+## Abuse Controls
+
+Issue #57 protects document upload, query, streamed query, and evaluation execution with configurable Redis-backed fixed-window limits. Rate-limit keys hash the backend-observed client identifier before storage, exceeded budgets return HTTP `429` with `Retry-After`, and Redis failures fail closed with a safe `503` for protected expensive actions. Until authentication exists, client network address is the MVP caller boundary.
 
 ## Evaluation
 

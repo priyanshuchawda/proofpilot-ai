@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db_session
 from app.evaluation.metrics import EvaluationSummary
+from app.security.rate_limiting import enforce_sensitive_rate_limit
 from app.services.evaluations import EvaluationRunResponse, EvaluationService
 
 router = APIRouter(tags=["evaluations"])
@@ -22,8 +23,10 @@ def get_evaluation_service(
     status_code=status.HTTP_201_CREATED,
 )
 async def run_evaluation(
+    _rate_limit: Annotated[None, Depends(enforce_sensitive_rate_limit)],
     service: Annotated[EvaluationService, Depends(get_evaluation_service)],
 ) -> EvaluationRunResponse:
+    del _rate_limit
     return await service.run_golden_evaluation()
 
 

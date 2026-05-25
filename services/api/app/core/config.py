@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     gemini_embeddings_enabled: bool = False
     gemini_search_grounding_enabled: bool = False
     upload_indexing_enabled: bool = True
+    proofpilot_rate_limiting_enabled: bool = True
+    proofpilot_rate_limit_sensitive_requests: int = 20
+    proofpilot_rate_limit_window_seconds: int = 60
     run_gemini_smoke: bool = False
 
     @field_validator("proofpilot_api_cors_origins")
@@ -44,6 +47,16 @@ class Settings(BaseSettings):
                 or parsed.fragment
             ):
                 raise ValueError("CORS origins must be explicit HTTP(S) origins.")
+        return value
+
+    @field_validator(
+        "proofpilot_rate_limit_sensitive_requests",
+        "proofpilot_rate_limit_window_seconds",
+    )
+    @classmethod
+    def validate_positive_integer(cls, value: int) -> int:
+        if value < 1:
+            raise ValueError("Rate limit settings must be positive integers.")
         return value
 
     @property

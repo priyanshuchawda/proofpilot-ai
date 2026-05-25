@@ -63,7 +63,10 @@ async def test_upload_list_and_status_for_text_document() -> None:
             yield session
 
     app.dependency_overrides[get_db_session] = test_session
-    app.dependency_overrides[get_settings] = lambda: Settings(upload_indexing_enabled=False)
+    app.dependency_overrides[get_settings] = lambda: Settings(
+        proofpilot_rate_limiting_enabled=False,
+        upload_indexing_enabled=False,
+    )
     queue = FakeIngestionQueue()
     app.dependency_overrides[get_ingestion_queue] = lambda: queue
     transport = ASGITransport(app=app)
@@ -101,6 +104,9 @@ async def test_upload_reports_queue_unavailability_without_internal_details() ->
     service = AcceptedDocumentService()
     app.dependency_overrides[get_document_service] = lambda: service
     app.dependency_overrides[get_ingestion_queue] = lambda: UnavailableIngestionQueue()
+    app.dependency_overrides[get_settings] = lambda: Settings(
+        proofpilot_rate_limiting_enabled=False
+    )
     transport = ASGITransport(app=app, raise_app_exceptions=False)
     try:
         async with AsyncClient(transport=transport, base_url="http://testserver") as client:
