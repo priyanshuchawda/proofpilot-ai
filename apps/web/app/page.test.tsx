@@ -28,9 +28,9 @@ test("renders the API health check status", async () => {
           json: async () => ({
             backend_only: true,
             gemini_configured: true,
-            generation_model: "gemini-3.1-flash-lite",
+            generation_model: "gemini-2.5-flash-lite",
             lightweight_model: "gemini-2.5-flash-lite",
-            freshness_model: "gemini-3.1-flash-lite",
+            freshness_model: "gemini-2.5-flash-lite",
             search_grounding_model: "gemini-2.5-flash-lite",
             embedding_model: "gemini-embedding-2",
             embedding_dimension: 768,
@@ -69,7 +69,7 @@ test("renders the API health check status", async () => {
     expect(screen.getByText("API healthy")).toBeInTheDocument();
   });
   await waitFor(() => {
-    expect(screen.getByText("gemini-3.1-flash-lite primary")).toBeInTheDocument();
+    expect(screen.getByText("gemini-2.5-flash-lite primary")).toBeInTheDocument();
   });
   expect(screen.getByText("Gemini mode")).toBeInTheDocument();
   expect(screen.getByText("Generation route")).toBeInTheDocument();

@@ -12,7 +12,7 @@ The MVP must require only `GEMINI_API_KEY`, local Docker services, and free GitH
 
 Treat model IDs and grounding availability as configuration. Default search grounding to disabled until the backend verifies the selected model is free-tier-safe. Never fall back to paid models automatically.
 
-Use `gemini-3.1-flash-lite` for ordinary non-search generation when configured. Use `gemini-2.5-flash-lite` as the Search-grounding fallback because the 2026-05-24 official pricing review marks Gemini 3.1 Flash-Lite free-tier Search grounding as unavailable while Gemini 2.5 Flash-Lite remains free-tier-safe up to documented quota.
+Use configurable model IDs for ordinary non-search generation. Current development defaults use `gemini-2.5-flash-lite` only. Use `gemini-2.5-flash-lite` as the Search-grounding fallback because the 2026-05-24 official pricing review marks Gemini 3.1 Flash-Lite free-tier Search grounding as unavailable while Gemini 2.5 Flash-Lite remains free-tier-safe up to documented quota.
 
 For ordinary non-Search generation only, a temporary HTTP `503` from the configured primary model may be retried once with `GEMINI_LIGHTWEIGHT_MODEL`. HTTP `429` remains a quota refusal, and Google Search grounding continues to use its independently selected Search-safe route. The structured answer records the model that successfully generated the response.
 

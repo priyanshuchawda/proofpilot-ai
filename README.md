@@ -115,9 +115,9 @@ Use `.env.example` as the source of truth. Current development defaults use:
 - `NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000`
 - `QDRANT_COLLECTION=proofpilot_chunks`
 - `GEMINI_PROVIDER_MODE=auto`
-- `GEMINI_GENERATION_MODEL=gemini-3.1-flash-lite`
+- `GEMINI_GENERATION_MODEL=gemini-2.5-flash-lite`
 - `GEMINI_LIGHTWEIGHT_MODEL=gemini-2.5-flash-lite`
-- `GEMINI_FRESH_MODEL=gemini-3.1-flash-lite`
+- `GEMINI_FRESH_MODEL=gemini-2.5-flash-lite`
 - `GEMINI_SEARCH_GROUNDING_FALLBACK_MODEL=gemini-2.5-flash-lite`
 - `GEMINI_EMBEDDING_MODEL=gemini-embedding-2`
 - `GEMINI_EMBEDDINGS_ENABLED=false`
