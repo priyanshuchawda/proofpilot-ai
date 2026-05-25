@@ -30,10 +30,11 @@ Last updated: 2026-05-25
 - #55: Add deterministic Playwright coverage for the cited-answer user flow.
 - #57: Add Redis-backed rate limits for sensitive API actions.
 - #58: Add structured request telemetry and trace-safe JSON logging.
+- #59: Add Docker-backed full-stack browser smoke for worker ingestion and cited answers.
 
 ## Current Issue
 
-- #59: Add Docker-backed full-stack browser smoke for worker ingestion and cited answers. Implementation is in progress on `feat/59-docker-fullstack-smoke`.
+- #60: Design local auth/session and workspace ownership boundary. Implementation is in progress on `feat/60-local-session-workspace-ownership`.
 
 ## Current Architecture Decisions
 
@@ -45,6 +46,7 @@ Last updated: 2026-05-25
 - Current provider defaults prefer `gemini-3.1-flash-lite` for non-search generation, retry temporary non-Search overload once through `gemini-2.5-flash-lite`, and use `gemini-2.5-flash-lite` as the separately selected free-tier-safe Search-grounding fallback.
 - Keep real Gemini smoke tests manual only behind `RUN_GEMINI_SMOKE=1`.
 - `GEMINI_PROVIDER_MODE=mock` forces deterministic zero-cost generation even when an ignored local `.env` contains a real key; the full-stack smoke uses this by default.
+- Workspaces store `owner_session_id`. `X-ProofPilot-Session` is the local identity boundary, and `PROOFPILOT_WORKSPACE_OWNERSHIP_ENABLED=true` enables cross-session workspace/document/query/trace isolation without a paid auth provider.
 - Use deterministic local embeddings by default for current vector plumbing and tests. Real Gemini embeddings are opt-in with `GEMINI_EMBEDDINGS_ENABLED=true` and `gemini-embedding-2`.
 - Uploaded documents return `uploaded` after validated local storage and Redis enqueue. A local Python worker uses the existing `DocumentIndexer` boundary to parse, redact, chunk, embed, and index documents while persisting lifecycle status.
 - Qdrant collection name is configurable through `QDRANT_COLLECTION`; opt-in full-stack smoke runs use an isolated collection to avoid collisions with existing local demo vectors.
@@ -211,6 +213,10 @@ Last updated: 2026-05-25
 - Issue #59 focused GREEN checks: changed-file Ruff/Pyright passed; `uv run pytest tests/test_gemini_provider.py tests/test_ai_settings.py tests/test_query_api.py tests/test_document_service_indexing.py -q` passed with 21 tests; `pnpm typecheck` passed; unflagged `pnpm fullstack:smoke` skipped safely.
 - Issue #59 Docker-backed full-stack smoke: `RUN_FULL_STACK_SMOKE=1 pnpm fullstack:smoke` passed with local Docker PostgreSQL/Redis/Qdrant, Alembic migration, API, one worker, production frontend, public Markdown upload, worker indexing, Verified Mode query, cited answer, evidence, and retrieval trace using isolated Qdrant collection `proofpilot_smoke_1779724723800`.
 - Issue #59 standard local gates: backend format, lint, Pyright, and `uv run pytest -q` passed with 101 tests and 14 opt-in skips; generated API drift check passed; frontend lint, typecheck, `pnpm test` passed with 19 tests, `pnpm build` passed, deterministic `pnpm e2e` passed with 1 test and 1 opt-in smoke skip, Docker Compose validation passed, whitespace checks passed, generated Next.js type cleanliness passed, and tracked secret-pattern scan passed.
+- Issue #60 RED check: `uv run pytest tests/test_local_session_access.py -q` failed because workspaces had no owner field and endpoints did not enforce local-session ownership.
+- Issue #60 focused GREEN checks: `uv run pytest tests/test_local_session_access.py -q` passed with 4 tests; focused API compatibility tests passed with 19 tests after adding workspace/document/query/trace ownership checks.
+- Issue #60 migration verification: local PostgreSQL `uv run alembic upgrade head`, `uv run alembic downgrade 0002_chunk_fts_index`, and `uv run alembic upgrade head` passed for `0003_workspace_owner_session`.
+- Issue #60 standard local gates: backend format, lint, Pyright, and `uv run pytest -q` passed with 105 tests and 14 opt-in skips; generated API client was regenerated and `pnpm api:check` passed; frontend lint, typecheck, `pnpm test` passed with 19 tests, `pnpm build` passed, deterministic `pnpm e2e` passed with 1 test and 1 opt-in smoke skip, Docker Compose validation passed, whitespace checks passed, generated Next.js type cleanliness passed, and tracked secret-pattern scan passed.
 
 ## Unresolved Risks
 

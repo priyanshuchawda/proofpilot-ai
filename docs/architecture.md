@@ -30,6 +30,7 @@ ProofPilot AI is a monorepo with a TypeScript frontend, Python AI backend, and l
 - Playwright browser coverage exercises the upload-to-cited-answer UI contract against deterministic versioned API/SSE fixtures; infrastructure and Gemini paths retain separate verification.
 - Sensitive POST routes use a Redis-backed fixed-window rate limiter keyed by hashed backend-observed client identifiers. Authenticated principal scoping is deferred to the auth/workspace ownership issue.
 - API responses carry `X-Request-ID`, and local structured request logs contain only safe metadata: method, path without query string, status, duration, request ID, rate-limit outcome, and safe query-run correlation fields when available.
+- Local workspace ownership is represented by `owner_session_id` on workspaces. `X-ProofPilot-Session` provides a free local identity boundary, and `PROOFPILOT_WORKSPACE_OWNERSHIP_ENABLED=true` enforces cross-session isolation for workspaces, documents, queries, and query-run traces.
 - No real Gemini calls run in automated CI.
 
 ## Persistence

@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import Settings, get_settings
 from app.db.models import (
     CitedEvidence,
     DocumentChunk,
@@ -15,6 +16,7 @@ from app.db.models import (
     VerificationResult,
 )
 from app.db.session import get_db_session
+from app.security.local_session import LocalSession, ensure_workspace_owner, get_local_session
 
 router = APIRouter(tags=["query-runs"])
 
@@ -73,6 +75,8 @@ class QueryRunTraceResponse(BaseModel):
 async def get_query_run_trace(
     query_run_id: str,
     session: Annotated[AsyncSession, Depends(get_db_session)],
+    settings: Annotated[Settings, Depends(get_settings)],
+    local_session: Annotated[LocalSession, Depends(get_local_session)],
 ) -> QueryRunTraceResponse:
     query_run = await session.get(QueryRun, query_run_id)
     if query_run is None:
@@ -80,6 +84,12 @@ async def get_query_run_trace(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Query run not found.",
         )
+    await ensure_workspace_owner(
+        workspace_id=query_run.workspace_id,
+        session=session,
+        local_session=local_session,
+        settings=settings,
+    )
 
     candidates = (
         await session.execute(

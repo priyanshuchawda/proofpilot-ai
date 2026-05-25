@@ -29,6 +29,7 @@ class Settings(BaseSettings):
     proofpilot_rate_limiting_enabled: bool = True
     proofpilot_rate_limit_sensitive_requests: int = 20
     proofpilot_rate_limit_window_seconds: int = 60
+    proofpilot_workspace_ownership_enabled: bool = False
     run_gemini_smoke: bool = False
 
     @field_validator("proofpilot_api_cors_origins")
