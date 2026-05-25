@@ -37,7 +37,7 @@ def get_query_service(
         embedding_provider=build_embedding_provider(settings),
         vector_store=QdrantVectorStore(
             url=settings.qdrant_url,
-            collection="proofpilot_chunks",
+            collection=settings.qdrant_collection,
         ),
         embedding_model=(
             settings.gemini_embedding_model

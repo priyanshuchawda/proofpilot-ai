@@ -1,3 +1,4 @@
+import re
 from functools import lru_cache
 from urllib.parse import urlsplit
 
@@ -13,7 +14,9 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://proofpilot:proofpilot@127.0.0.1:55432/proofpilot"
     redis_url: str = "redis://localhost:6379/0"
     qdrant_url: str = "http://localhost:6333"
+    qdrant_collection: str = "proofpilot_chunks"
     gemini_api_key: str | None = None
+    gemini_provider_mode: str = "auto"
     gemini_generation_model: str = "gemini-3.1-flash-lite"
     gemini_lightweight_model: str = "gemini-2.5-flash-lite"
     gemini_fresh_model: str = "gemini-3.1-flash-lite"
@@ -57,6 +60,22 @@ class Settings(BaseSettings):
     def validate_positive_integer(cls, value: int) -> int:
         if value < 1:
             raise ValueError("Rate limit settings must be positive integers.")
+        return value
+
+    @field_validator("qdrant_collection")
+    @classmethod
+    def validate_qdrant_collection(cls, value: str) -> str:
+        if not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", value):
+            raise ValueError(
+                "Qdrant collection must contain only letters, numbers, underscores, and hyphens."
+            )
+        return value
+
+    @field_validator("gemini_provider_mode")
+    @classmethod
+    def validate_gemini_provider_mode(cls, value: str) -> str:
+        if value not in {"auto", "google", "mock"}:
+            raise ValueError("Gemini provider mode must be auto, google, or mock.")
         return value
 
     @property

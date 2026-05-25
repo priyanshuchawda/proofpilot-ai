@@ -111,6 +111,8 @@ If another local project already owns backend port `8000`, run the ProofPilot AP
 Use `.env.example` as the source of truth. Current development defaults use:
 
 - `NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000`
+- `QDRANT_COLLECTION=proofpilot_chunks`
+- `GEMINI_PROVIDER_MODE=auto`
 - `GEMINI_GENERATION_MODEL=gemini-3.1-flash-lite`
 - `GEMINI_LIGHTWEIGHT_MODEL=gemini-2.5-flash-lite`
 - `GEMINI_FRESH_MODEL=gemini-3.1-flash-lite`
@@ -178,6 +180,15 @@ pnpm e2e
 ```
 
 The Playwright gate runs the production frontend locally and uses deterministic browser-intercepted API/SSE fixtures for the public upload-to-cited-answer flow. It does not use `GEMINI_API_KEY`, Docker services, or a real model request.
+
+Docker-backed full-stack smoke:
+
+```powershell
+$env:RUN_FULL_STACK_SMOKE='1'
+pnpm fullstack:smoke
+```
+
+This opt-in smoke starts local Docker services, applies migrations, runs the API and one ingestion worker, builds/serves the production frontend, uploads a public Markdown document, waits for worker indexing, asks a Verified Mode question, and verifies a cited answer plus retrieval trace. By default it forces `GEMINI_PROVIDER_MODE=mock`, uses deterministic local embeddings, and writes vectors to an isolated Qdrant collection. Set `RUN_FULL_STACK_GEMINI_LIVE=1` only when intentionally spending a tiny live Gemini request with your ignored local `.env`.
 
 Infrastructure:
 

@@ -1,3 +1,4 @@
+import json
 from types import SimpleNamespace
 
 import pytest
@@ -34,6 +35,23 @@ async def test_mock_gemini_provider_returns_deterministic_response() -> None:
     assert response.provider == "mock"
 
 
+async def test_mock_gemini_provider_returns_valid_cited_json_for_structured_answers() -> None:
+    provider = MockGeminiProvider()
+
+    response = await provider.generate_text(
+        GeminiGenerateRequest(
+            prompt="[chunk-a] public-evidence.md (Approval)\nThe rollout needs evidence.",
+            model="gemini-2.5-flash-lite",
+            response_json_schema={"type": "object"},
+        )
+    )
+
+    payload = json.loads(response.text)
+    assert payload["answer_text"] == "Mock cited answer based on evidence [chunk-a]."
+    assert payload["citation_chunk_ids"] == ["chunk-a"]
+    assert response.provider == "mock"
+
+
 def test_gemini_generate_request_can_enable_google_search_tool() -> None:
     request = GeminiGenerateRequest(
         prompt="What changed today?",
@@ -46,6 +64,14 @@ def test_gemini_generate_request_can_enable_google_search_tool() -> None:
 
 def test_provider_factory_uses_mock_when_key_missing_in_development() -> None:
     settings = Settings(gemini_api_key=None)
+
+    provider = build_gemini_provider(settings)
+
+    assert isinstance(provider, MockGeminiProvider)
+
+
+def test_provider_factory_can_force_mock_even_when_key_is_configured() -> None:
+    settings = Settings(gemini_api_key="local-key", gemini_provider_mode="mock")
 
     provider = build_gemini_provider(settings)
 

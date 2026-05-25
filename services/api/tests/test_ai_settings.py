@@ -1,3 +1,4 @@
+import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.core.config import Settings, get_settings
@@ -34,3 +35,14 @@ async def test_ai_settings_report_safe_development_defaults() -> None:
         "search_grounding_enabled": False,
         "live_smoke_enabled": False,
     }
+
+
+def test_qdrant_collection_setting_allows_isolated_smoke_collection() -> None:
+    settings = Settings(qdrant_collection="proofpilot_smoke_123")
+
+    assert settings.qdrant_collection == "proofpilot_smoke_123"
+
+
+def test_qdrant_collection_setting_rejects_unsafe_collection_names() -> None:
+    with pytest.raises(ValueError, match="Qdrant collection"):
+        Settings(qdrant_collection="../proofpilot")

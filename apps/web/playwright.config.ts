@@ -1,6 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const frontendUrl = "http://127.0.0.1:3013";
+const frontendUrl = process.env.PROOFPILOT_E2E_FRONTEND_URL ?? "http://127.0.0.1:3013";
+const frontendPort = new URL(frontendUrl).port || "80";
 
 export default defineConfig({
   expect: {
@@ -17,7 +18,7 @@ export default defineConfig({
     ...devices["Desktop Chrome"],
   },
   webServer: {
-    command: "pnpm build && pnpm exec next start --hostname 127.0.0.1 --port 3013",
+    command: `pnpm build && pnpm exec next start --hostname 127.0.0.1 --port ${frontendPort}`,
     reuseExistingServer: false,
     timeout: 120_000,
     url: frontendUrl,

@@ -39,7 +39,7 @@ def build_document_processor(*, session: AsyncSession, settings: Settings) -> Do
             embedding_provider=build_embedding_provider(settings),
             vector_store=QdrantVectorStore(
                 url=settings.qdrant_url,
-                collection="proofpilot_chunks",
+                collection=settings.qdrant_collection,
             ),
             embedding_model=(
                 settings.gemini_embedding_model
