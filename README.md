@@ -124,12 +124,15 @@ Use `.env.example` as the source of truth. Current development defaults use:
 - `PROOFPILOT_RATE_LIMITING_ENABLED=true`
 - `PROOFPILOT_RATE_LIMIT_SENSITIVE_REQUESTS=20`
 - `PROOFPILOT_RATE_LIMIT_WINDOW_SECONDS=60`
+- `PROOFPILOT_WORKSPACE_OWNERSHIP_ENABLED=false`
 
 Search grounding remains disabled by default. When enabled, ProofPilot uses a free-tier-safe Search model fallback instead of sending grounded prompts through a model whose free-tier Search pricing is unavailable.
 
 Ordinary document answers use `GEMINI_GENERATION_MODEL` first and retry one temporary provider overload through `GEMINI_LIGHTWEIGHT_MODEL`. Quota exhaustion is surfaced without retry, and the answer trace displays the model that actually succeeded.
 
 Sensitive POST routes for uploads, document queries, streamed queries, and evaluation runs use Redis-backed fixed-window rate limits. Exceeded budgets return HTTP `429` with `Retry-After`; limiter backend failures fail closed with a safe retry response. Disable rate limiting only for controlled local tests.
+
+For local multi-user boundary testing, set `PROOFPILOT_WORKSPACE_OWNERSHIP_ENABLED=true` and send `X-ProofPilot-Session` from clients. Foreign workspace, document, query, and trace access returns `404`; this is a local ownership boundary, not a production auth provider.
 
 Every API response includes `X-Request-ID`. The backend emits one structured JSON request log per request with method, path without query string, status, duration, request ID, and whether the response was rate-limited. Query endpoints also attach safe correlation fields such as query run ID, cache status, effective generation model, and live-grounding usage. Request bodies, uploaded document text, authorization headers, query strings, and API keys are not logged.
 

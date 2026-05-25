@@ -28,6 +28,9 @@ class Workspace(TimestampMixin, Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
     name: Mapped[str] = mapped_column(String(160), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
+    owner_session_id: Mapped[str] = mapped_column(
+        String(128), nullable=False, default="local-anonymous", index=True
+    )
 
 
 class Document(TimestampMixin, Base):

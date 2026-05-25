@@ -13,6 +13,7 @@ from app.answers.schemas import AnswerResponse
 from app.core.config import Settings, get_settings
 from app.db.session import get_db_session
 from app.retrieval.keyword import PostgresKeywordRetriever
+from app.security.local_session import LocalSession, ensure_workspace_owner, get_local_session
 from app.security.rate_limiting import enforce_sensitive_rate_limit
 from app.services.answers import AnswerService
 from app.services.embedding_index import EmbeddingIndexService
@@ -74,9 +75,18 @@ async def query_workspace(
     http_request: Request,
     request: QueryRequest,
     _rate_limit: Annotated[None, Depends(enforce_sensitive_rate_limit)],
+    db_session: Annotated[AsyncSession, Depends(get_db_session)],
+    settings: Annotated[Settings, Depends(get_settings)],
+    local_session: Annotated[LocalSession, Depends(get_local_session)],
     service: Annotated[QueryService, Depends(get_query_service)],
 ) -> AnswerResponse:
     del _rate_limit
+    await ensure_workspace_owner(
+        workspace_id=workspace_id,
+        session=db_session,
+        local_session=local_session,
+        settings=settings,
+    )
     answer = await service.answer_workspace_query(
         workspace_id=workspace_id,
         query=request.query,
@@ -92,9 +102,18 @@ async def query_workspace_stream(
     http_request: Request,
     request: QueryRequest,
     _rate_limit: Annotated[None, Depends(enforce_sensitive_rate_limit)],
+    db_session: Annotated[AsyncSession, Depends(get_db_session)],
+    settings: Annotated[Settings, Depends(get_settings)],
+    local_session: Annotated[LocalSession, Depends(get_local_session)],
     service: Annotated[QueryService, Depends(get_query_service)],
 ) -> StreamingResponse:
     del _rate_limit
+    await ensure_workspace_owner(
+        workspace_id=workspace_id,
+        session=db_session,
+        local_session=local_session,
+        settings=settings,
+    )
     answer = await service.answer_workspace_query(
         workspace_id=workspace_id,
         query=request.query,
