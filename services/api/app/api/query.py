@@ -2,7 +2,7 @@ import json
 from collections.abc import AsyncIterator
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -71,21 +71,25 @@ def get_query_service(
 )
 async def query_workspace(
     workspace_id: str,
+    http_request: Request,
     request: QueryRequest,
     _rate_limit: Annotated[None, Depends(enforce_sensitive_rate_limit)],
     service: Annotated[QueryService, Depends(get_query_service)],
 ) -> AnswerResponse:
     del _rate_limit
-    return await service.answer_workspace_query(
+    answer = await service.answer_workspace_query(
         workspace_id=workspace_id,
         query=request.query,
         mode=request.mode,
     )
+    _attach_answer_telemetry(http_request, answer)
+    return answer
 
 
 @router.post("/api/v1/workspaces/{workspace_id}/query/stream")
 async def query_workspace_stream(
     workspace_id: str,
+    http_request: Request,
     request: QueryRequest,
     _rate_limit: Annotated[None, Depends(enforce_sensitive_rate_limit)],
     service: Annotated[QueryService, Depends(get_query_service)],
@@ -96,6 +100,7 @@ async def query_workspace_stream(
         query=request.query,
         mode=request.mode,
     )
+    _attach_answer_telemetry(http_request, answer)
 
     async def events() -> AsyncIterator[str]:
         visible_text = answer.refusal_reason or answer.answer_text
@@ -114,3 +119,10 @@ def _answer_deltas(text: str) -> list[str]:
 def _sse_event(event: str, payload: object) -> str:
     data = json.dumps(payload, separators=(",", ":"))
     return f"event: {event}\ndata: {data}\n\n"
+
+
+def _attach_answer_telemetry(request: Request, answer: AnswerResponse) -> None:
+    request.state.query_run_id = answer.query_run_id
+    request.state.cache_status = answer.cache_status
+    request.state.generation_model_used = answer.generation_model_used
+    request.state.live_grounding_used = answer.live_grounding_used

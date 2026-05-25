@@ -28,10 +28,11 @@ Last updated: 2026-05-25
 - #51: Implement queued asynchronous document ingestion worker.
 - #52: Fix configurable strict CORS origins for local frontend ports.
 - #55: Add deterministic Playwright coverage for the cited-answer user flow.
+- #57: Add Redis-backed rate limits for sensitive API actions.
 
 ## Current Issue
 
-- #57: Add Redis-backed rate limits for sensitive API actions. Implementation is in progress on `feat/57-sensitive-rate-limits`.
+- #58: Add structured request telemetry and trace-safe JSON logging. Implementation is in progress on `feat/58-structured-telemetry`.
 
 ## Current Architecture Decisions
 
@@ -47,6 +48,7 @@ Last updated: 2026-05-25
 - Redis ingestion jobs use pending and in-flight lists. The worker acknowledges terminal processing and requeues unacknowledged work at startup; the recovery contract supports one local worker process and resumes already committed chunk stages safely.
 - Browser CORS uses a validated explicit-origin allowlist from `PROOFPILOT_API_CORS_ORIGINS`; wildcard origins and URL values containing credentials or non-origin components are rejected.
 - Sensitive POST routes use a Redis-backed fixed-window rate limiter keyed by hashed backend-observed caller identifiers. Uploads, query JSON/SSE, and evaluation execution return `429` with `Retry-After` on exhaustion and safe `503` when the limiter backend is unavailable.
+- API responses include `X-Request-ID`, and request logs are structured JSON records containing only safe metadata: method, path without query string, status, duration, request ID, rate-limit outcome, and query-run correlation fields when available.
 - Qdrant collection setup is idempotent when the stored vector dimension and distance metric match the active embedding and search contract. Under asynchronous processing, incompatible configuration is recorded as a non-sensitive failed ingestion status.
 - Hybrid retrieval uses deterministic Reciprocal Rank Fusion over dense Qdrant IDs and workspace-scoped PostgreSQL full-text candidates, with trace rows persisted for inspection. SQLite unit tests inject deterministic keyword scoring behind the same typed retriever boundary.
 - Cited answer generation validates generated citation IDs against retrieved evidence and refuses when evidence is missing or citations are fabricated.
@@ -199,6 +201,9 @@ Last updated: 2026-05-25
 - Issue #57 focused GREEN checks: changed-file Ruff/Pyright passed; `uv run pytest tests/test_query_api.py tests/test_document_api.py tests/test_evaluation_api.py tests/test_rate_limiting.py tests/test_rate_limiting_integration.py -q` passed with 13 tests and 1 skipped.
 - Issue #57 Docker Redis verification: `RUN_INFRA_INTEGRATION=1 uv run pytest tests/test_rate_limiting_integration.py -q` passed with 1 test.
 - Issue #57 standard local gates: backend format, lint, Pyright, and `uv run pytest -q` passed with 93 tests and 14 opt-in skips; generated API drift check passed; Docker Compose validation, whitespace checks, and tracked secret-pattern scan passed.
+- Issue #58 RED check: `uv run pytest tests/test_request_logging.py -q` failed because responses did not include `X-Request-ID` and no structured request log was emitted.
+- Issue #58 focused GREEN checks: changed-file Ruff/Pyright passed; `uv run pytest tests/test_request_logging.py tests/test_query_api.py tests/test_rate_limiting.py -q` passed with 14 tests.
+- Issue #58 standard local gates: backend format, lint, Pyright, and `uv run pytest -q` passed with 97 tests and 14 opt-in skips; generated API drift check passed; Docker Compose validation, whitespace checks, generated Next.js type cleanliness, and tracked secret-pattern scan passed.
 
 ## Unresolved Risks
 
@@ -218,4 +223,4 @@ Last updated: 2026-05-25
 
 ## Next Issue
 
-- Complete Issue #57 local gates and merge it, then implement structured request telemetry in Issue #58.
+- Complete Issue #58 local gates and merge it, then implement Docker-backed full-stack browser smoke in Issue #59.

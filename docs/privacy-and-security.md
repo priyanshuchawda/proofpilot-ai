@@ -14,7 +14,7 @@
 - Gemini free-tier requests may be eligible for provider product improvement.
 - The UI must warn users before upload to use public demo documents only.
 - Server-side redaction must run before document chunks or prompts are sent to any model.
-- Logs must include request metadata, not uploaded file content.
+- Request logs include only trace-safe metadata: request ID, method, route path without query string, status code, duration, rate-limit outcome, and safe query-run correlation fields when available. They must not include uploaded file content, prompt text, authorization headers, query strings, or API keys.
 
 ## Upload Safety
 
