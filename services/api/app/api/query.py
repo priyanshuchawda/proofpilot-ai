@@ -8,10 +8,15 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.embeddings import build_embedding_provider
-from app.ai.gemini import build_gemini_provider, choose_search_grounding_model
+from app.ai.gemini import (
+    InstrumentedGeminiProvider,
+    build_gemini_provider,
+    choose_search_grounding_model,
+)
 from app.answers.schemas import AnswerResponse
 from app.core.config import Settings, get_settings
 from app.db.session import get_db_session
+from app.observability.telemetry import TelemetryRegistry, get_telemetry_registry
 from app.retrieval.keyword import PostgresKeywordRetriever
 from app.security.local_session import LocalSession, ensure_workspace_owner, get_local_session
 from app.security.rate_limiting import enforce_sensitive_rate_limit
@@ -32,6 +37,7 @@ class QueryRequest(BaseModel):
 def get_query_service(
     session: Annotated[AsyncSession, Depends(get_db_session)],
     settings: Annotated[Settings, Depends(get_settings)],
+    telemetry: Annotated[TelemetryRegistry, Depends(get_telemetry_registry)],
 ) -> QueryService:
     embedding_service = EmbeddingIndexService(
         session=session,
@@ -53,7 +59,10 @@ def get_query_service(
     )
     answer_service = AnswerService(
         session=session,
-        gemini_provider=build_gemini_provider(settings),
+        gemini_provider=InstrumentedGeminiProvider(
+            provider=build_gemini_provider(settings),
+            telemetry=telemetry,
+        ),
         generation_model=settings.gemini_generation_model,
         fallback_generation_model=settings.gemini_lightweight_model,
         grounding_model=choose_search_grounding_model(settings),
@@ -63,6 +72,7 @@ def get_query_service(
         retrieval_service=retrieval_service,
         answer_service=answer_service,
         grounding_enabled=settings.gemini_search_grounding_enabled,
+        telemetry=telemetry,
     )
 
 

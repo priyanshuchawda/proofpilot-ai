@@ -6,6 +6,7 @@ from typing import Any, Protocol, cast
 from pydantic import BaseModel, Field
 
 from app.core.config import Settings
+from app.observability.telemetry import TelemetryRegistry
 
 FREE_TIER_SEARCH_GROUNDING_MODELS = frozenset(
     {
@@ -56,6 +57,34 @@ class GeminiGenerateResponse(BaseModel):
 
 class GeminiProvider(Protocol):
     async def generate_text(self, request: GeminiGenerateRequest) -> GeminiGenerateResponse: ...
+
+
+class InstrumentedGeminiProvider:
+    def __init__(
+        self,
+        *,
+        provider: GeminiProvider,
+        telemetry: TelemetryRegistry,
+    ) -> None:
+        self._provider = provider
+        self._telemetry = telemetry
+
+    async def generate_text(self, request: GeminiGenerateRequest) -> GeminiGenerateResponse:
+        try:
+            response = await self._provider.generate_text(request)
+        except Exception as error:
+            self._telemetry.record_gemini_error(
+                provider=getattr(error, "provider", "unknown"),
+                model=request.model,
+                status_code=_error_status_code(error),
+            )
+            raise
+        self._telemetry.record_gemini_request(
+            provider=response.provider,
+            model=response.model,
+            google_search=request.enable_google_search,
+        )
+        return response
 
 
 class MockGeminiProvider:
@@ -152,6 +181,11 @@ def normalize_gemini_unavailable_error(error: object) -> GeminiProviderUnavailab
     if isinstance(status_code, int) and status_code in {429, 503}:
         return GeminiProviderUnavailableError(status_code=status_code)
     return None
+
+
+def _error_status_code(error: object) -> int | None:
+    status_code = _value(error, "status_code", "code")
+    return status_code if isinstance(status_code, int) else None
 
 
 def extract_web_grounding_sources(response: object) -> list[GeminiGroundingSource]:

@@ -2,7 +2,7 @@
 
 Evidence-first GenAI decision copilot for uploaded documents and freshness-aware questions.
 
-ProofPilot AI is not a generic chat-with-PDF demo. The MVP is built around retrieval architecture that is visible and testable: secure ingestion, redaction, chunk metadata, hybrid retrieval, citation validation, deterministic routing, contradiction checks, workspace-scoped caching, latency metrics, and a local evaluation dashboard.
+ProofPilot AI is not a generic chat-with-PDF demo. The MVP is built around retrieval architecture that is visible and testable: secure ingestion, redaction, chunk metadata, hybrid retrieval, citation validation, deterministic routing, contradiction checks, workspace-scoped caching, local telemetry, and a local evaluation dashboard.
 
 ## Architecture
 
@@ -43,6 +43,7 @@ Gemini API access is backend-only. The frontend never receives `GEMINI_API_KEY`.
 - Workspace/index-version scoped response caching.
 - Local latency metrics.
 - Trace-safe JSON request logs with `X-Request-ID`, route, status, duration, rate-limit outcome, and safe query-run correlation metadata when available.
+- Local aggregate operational metrics for Gemini calls, cache hit/miss counts, and dependency health.
 - Evaluation dashboard with deterministic metrics.
 - Generated TypeScript API client with OpenAPI drift check.
 - Live API health and Gemini settings cards for local demo readiness.

@@ -30,6 +30,9 @@ The MVP evaluation API exposes:
 - `POST /api/v1/evaluations/run`
 - `GET /api/v1/evaluations/runs/{run_id}`
 - `GET /api/v1/metrics/summary`
+- `GET /api/v1/metrics/operational`
+
+`/api/v1/metrics/operational` is not an AI quality score. It is a local operational snapshot for safe aggregate counters and dependency health.
 
 ## Browser Contract Verification
 

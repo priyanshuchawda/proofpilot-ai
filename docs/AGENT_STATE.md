@@ -31,10 +31,13 @@ Last updated: 2026-05-25
 - #57: Add Redis-backed rate limits for sensitive API actions.
 - #58: Add structured request telemetry and trace-safe JSON logging.
 - #59: Add Docker-backed full-stack browser smoke for worker ingestion and cited answers.
+- #60: Design local auth/session and workspace ownership boundary.
+- #61: Add deterministic retrieval quality controls.
+- #62: Strengthen citation paragraph validation.
 
 ## Current Issue
 
-- #60: Design local auth/session and workspace ownership boundary. Implementation is in progress on `feat/60-local-session-workspace-ownership`.
+- #65: Add provider, cache, and dependency telemetry counters. Implementation is in progress on `feat/65-telemetry-counters`.
 
 ## Current Architecture Decisions
 
@@ -54,6 +57,7 @@ Last updated: 2026-05-25
 - Browser CORS uses a validated explicit-origin allowlist from `PROOFPILOT_API_CORS_ORIGINS`; wildcard origins and URL values containing credentials or non-origin components are rejected.
 - Sensitive POST routes use a Redis-backed fixed-window rate limiter keyed by hashed backend-observed caller identifiers. Uploads, query JSON/SSE, and evaluation execution return `429` with `Retry-After` on exhaustion and safe `503` when the limiter backend is unavailable.
 - API responses include `X-Request-ID`, and request logs are structured JSON records containing only safe metadata: method, path without query string, status, duration, request ID, rate-limit outcome, and query-run correlation fields when available.
+- Local operational telemetry is aggregate-only. Gemini counters label provider/model/Search usage and safe availability errors, response-cache counters label hit/miss outcomes by mode and hashed workspace ID, and dependency summaries expose service status without prompts, document text, raw workspace IDs, headers, or keys.
 - Qdrant collection setup is idempotent when the stored vector dimension and distance metric match the active embedding and search contract. Under asynchronous processing, incompatible configuration is recorded as a non-sensitive failed ingestion status.
 - Hybrid retrieval uses deterministic Reciprocal Rank Fusion over dense Qdrant IDs and workspace-scoped PostgreSQL full-text candidates, with trace rows persisted for inspection. SQLite unit tests inject deterministic keyword scoring behind the same typed retriever boundary.
 - Post-fusion retrieval quality controls are deterministic and local: exact-match/overlap boosting, low-signal filtering, redundancy suppression, and persisted candidate `details` explain promoted and dropped evidence without model reranking.
@@ -226,6 +230,9 @@ Last updated: 2026-05-25
 - Issue #62 RED check: `uv run pytest tests/test_citation_validation.py tests/test_answer_service.py -q` failed because `validate_cited_paragraphs` did not exist.
 - Issue #62 focused GREEN check: `uv run pytest tests/test_citation_validation.py tests/test_answer_service.py -q` passed with 19 tests after adding paragraph-level citation validation and answer-service refusal.
 - Issue #62 standard local gates: backend format, lint, Pyright, and `uv run pytest -q` passed with 110 tests and 14 opt-in skips; generated API drift check passed; frontend lint, typecheck, `pnpm test` passed with 19 tests, `pnpm build` passed, deterministic `pnpm e2e` passed with 1 test and 1 opt-in smoke skip, Docker Compose validation passed, whitespace checks passed, generated Next.js type cleanliness passed, and tracked secret-pattern scan passed.
+- Issue #65 RED check: `uv run pytest tests/test_operational_telemetry.py -q` failed on missing `InstrumentedGeminiProvider`.
+- Issue #65 focused GREEN checks: `uv run pytest tests/test_operational_telemetry.py tests/test_gemini_provider.py tests/test_query_cache.py tests/test_dependency_health.py tests/test_evaluation_api.py -q` passed with 22 tests; changed-file Ruff and Pyright passed; `pnpm api:check` passed; `pnpm --filter @proofpilot/web test -- app/api-client.test.ts` passed with 4 tests.
+- Issue #65 standard local gates: backend format, lint, Pyright, and `uv run pytest -q` passed with 114 tests and 14 opt-in skips; generated API drift check passed; frontend lint, typecheck, `pnpm test` passed with 20 tests, `pnpm build` passed, deterministic `pnpm e2e` passed with 1 test and 1 opt-in full-stack smoke skip, Docker Compose validation passed, whitespace checks passed, and tracked secret-pattern scan passed.
 
 ## Unresolved Risks
 
@@ -245,4 +252,4 @@ Last updated: 2026-05-25
 
 ## Next Issue
 
-- Complete Issue #59 local gates and merge it, then implement local auth/session workspace ownership boundaries in Issue #60.
+- Complete Issue #65 local gates and merge it, then create the next hardening issue from the remaining architecture gaps.
